@@ -4,6 +4,7 @@ class mppiSmoothing {
 public:
     mppiSmoothing();
     ~mppiSmoothing();
+    void setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions);
     void interpolation();
     void f(const ImuData<double> &imuData);
     Eigen::MatrixXd getNoise(const int &T);
@@ -13,6 +14,7 @@ public:
     Eigen::MatrixXd exp(const Eigen::Vector3d &omega);
     Eigen::MatrixXd vectorToSkewSymmetric(const Eigen::Vector3d &vector);
 
+    Eigen::Matrix<double, 3, 8> anchorPositions;
     Eigen::MatrixXd U0;
     Eigen::MatrixXd xInit;
     Eigen::MatrixXd xTarget;

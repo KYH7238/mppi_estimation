@@ -10,15 +10,20 @@
 #include "mppiEstimation.h"
 
 mppiSmoothing::mppiSmoothing() {
+    anchorPositions.setZero();
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
-
     STATE.p << 0, 0, 0;
     STATE.R.setIdentity();
     STATE.v.setZero();
 
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
+}
+
+void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions){
+    anchorPositions = anchorpositions;
+    std::cout <<"Anchor positions: \n"<<anchorPositions<<std::endl;
 }
 
 void mppiSmoothing::interpolation() {
