@@ -9,6 +9,12 @@
 #include <omp.h>
 #include "mppiEstimation.h"
 
+STATE::STATE() {
+    p.setZero();
+    R.setIdentity();
+    v.setZero();
+}
+
 mppiSmoothing::mppiSmoothing(): T(10) {
     anchorPositions.setZero();
     N = 2000;
@@ -19,13 +25,14 @@ mppiSmoothing::mppiSmoothing(): T(10) {
     dimU << 0, 0, 0, 0, 0, 0;
     sigmaUvector << 0, 0, 0, 0, 0, 0;
     sigmaU = sigmaUvector.asDiagonal();
+    gammaU = 0;
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
     u0 = Eigen::VectorXd::Zero(dim_u);
     STATE Xo[T+1];
 }
 
-void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions) {
-    anchorPositions = anchorpositions;
+void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &positions) {
+    anchorPositions = positions;
     std::cout <<"Anchor positions: \n"<<anchorPositions<<std::endl;
 }
 
@@ -33,36 +40,31 @@ void mppiSmoothing::interpolation() {
 
 }
 
-STATE mppiSmoothing::f(const STATE &state, const ImuData<double> &imuData, const Eigen::VectorXd Ui) {
+STATE mppiSmoothing::f(const STATE &state, const ImuData &imuData, const Eigen::VectorXd Ui) {
     Eigen::Matrix3d Rot = state.R;
     Eigen::Vector3d accWorld = Rot*(imuData.acc - Ui.segment(0,3)) + _g;
-    // Eigen::Vector3d accWorld = Rot*imuData.acc + _g;
     state.p += state.v*dt+0.5*accWorld*dt*dt;
     state.v += accWorld*dt;
     state.R = Rot*Exp((imuData.gyr - Ui.segment(3,3))*dt);
-    // STATE.R = Rot*Exp(imuData.gyr*dt);
     return state;
-    
 }
 
 Eigen::MatrixXd mppiSmoothing::getNoise(const int &T) {
     return sigmaU * normGen.template generate<Eigen::MatrixXd>(dimU, T, urng);
 }
 
-void mppiSmoothing::move(const STATE curState, const ImuData<double> &imuData) {
+void mppiSmoothing::move(const STATE &curState, const ImuData &imuData) {
     xInit = f(curState, imuData, u0);
     U0.leftcols(T-1) = Uo.rightCols(T-1); 
 }
 
-void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen::MatrixXd &yMeas, const ImuData<double> &imuData) {
+void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const UwbData &uwbData, const ImuData &imuData) {
     Eigen::MatrixXd Ui = U_0.replicate(N, 1);
     Eigen::VectorXd costs(N);
     Eigen::VectorXd weights(N);
 
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
-        // Eigen::MatrixXd Xi(dimX, T+1);
-        // STATE[] Xi = new STATE[T]; ///////////////////////////////////////////check///////////////////////
         STATE Xi[T+1];
         Eigen::MatrixXd noise = getNoise(T);
         Ui.middleRows(i * dimU, dimU) += noise;
@@ -72,7 +74,6 @@ void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen:
 
         for (int j = 0; j < T; ++j) {
 
-            // Xi.col(j+1) = f(Xi.col(j), Ui.block(i * dimU, j, dimU, 1));
             Xi[j+1] = f(Xi[j], ImuData, Ui.block(i * dimU, j, dimU, 1));
             Eigen::VectorXd Hx(8);
             for (int i = 0; i < 8; ++i) {
@@ -82,7 +83,7 @@ void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen:
                 Hx(i) = std::sqrt(dx*dx + dy*dy + dz*dz);
             }
 
-            double stepCost = (yMeas.col(j) - Hx).squaredNorm();
+            double stepCost = (uwbData.ranges(j) - Hx).squaredNorm();
             cost += stepCost;
         }
         costs(i) = cost;
@@ -100,36 +101,36 @@ void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen:
 
     u0 = Uo.col(0);
 
-    Xo.col(0) = xInit;
+    Xo[0] = xInit;
     for (int j = 0; j < T; ++j) {
-        Xo.col(j+1) = Xo.col(j) + (dt * f(Xo.col(j), Uo.col(j)));
+        Xo[j+1] = f(Xo[j], ImuData, Uo[j]);
     }
 
     visual_traj.push_back(xInit);
 
     publishPose(xInit);
-    publishPose(Xo);
+    // publishPose(Xo);
 
 }
 
-void mppiSmoothing::publishPose(const Eigen::VectorXd &state) {
+void mppiSmoothing::publishPose(const STATE &state) {
     geometry_msgs::PoseStamped pose;
     pose.header.frame_id = "map";
     pose.header.stamp = ros::Time::now();
 
-    pose.pose.position.x = state(0);
-    pose.pose.position.y = state(1);
-    pose.pose.position.z = state(2);
-
-    pose.pose.orientation.w = 1.0;
-    pose.pose.orientation.x = 0.0;
-    pose.pose.orientation.y = 0.0;
-    pose.pose.orientation.z = 0.0;
+    pose.pose.position.x = state.p(0);
+    pose.pose.position.y = state.p(1);
+    pose.pose.position.z = state.p(2);
+    Eigen::Quaterniond q(state.R);
+    pose.pose.orientation.w = q.w;
+    pose.pose.orientation.x = q.x;
+    pose.pose.orientation.y = q.y;
+    pose.pose.orientation.z = q.z;
 
     resultPuber.publish(pose);
 }
 
-Eigen::MatrixXd mppiSmoothing::exp(const Eigen::Vector3d &omega) {
+Eigen::MatrixXd mppiSmoothing::Exp(const Eigen::Vector3d &omega) {
     double angle = omega.norm();
     Eigen::Matrix3d Rot;
     
@@ -155,24 +156,8 @@ Eigen::MatrixXd mppiSmoothing::vectorToSkewSymmetric(const Eigen::Vector3d &vect
     return Rot;
 }
 
-mppiSmoothing::~mppiSmoothing() { 
+mppiSmoothing::~mppiSmoothing() {}
 
-}
 
-STATE STATE::getState() {
-    return STATE;
-}
 
-STATE STATE::setState(const STATE &setState) {
-    STATE state = setState;
-    return state;
-}
-STATE::STATE(const int T) {
-    p.setZero();
-    R.setIdentity();
-    v.setZero();
-}
 
-class states
-{
-}
