@@ -11,17 +11,21 @@
 
 mppiSmoothing::mppiSmoothing() {
     anchorPositions.setZero();
+    T = 10;
+    N = 2000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
     STATE.p << 0, 0, 0;
     STATE.R.setIdentity();
     STATE.v.setZero();
-
+    dimU << 0, 0, 0, 0, 0, 0;
+    sigmaUvector << 0, 0, 0, 0, 0, 0;
+    sigmaU = sigmaUvector.asDiagonal();
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
 }
 
-void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions){
+void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions) {
     anchorPositions = anchorpositions;
     std::cout <<"Anchor positions: \n"<<anchorPositions<<std::endl;
 }
@@ -30,56 +34,58 @@ void mppiSmoothing::interpolation() {
 
 }
 
-void mppiSmoothing::f(const ImuData<double> &imuData) {
-    Eigen::Matrix3d Rot = STATE.R;
-    // Eigen::Vector3d accWorld = Rot*(imuData.acc - STATE.a_b) + _g;
-    Eigen::Vector3d accWorld = Rot*imuData.acc + _g;
-    STATE.p += STATE.v*dt+0.5*accWorld*dt*dt;
-    STATE.v += accWorld*dt;
-    // STATE.R = Rot*Exp((imuData.gyr - STATE.w_b)*dt);
-    STATE.R = Rot*Exp(imuData.gyr*dt);
+STATE mppiSmoothing::f(const STATE &state, const ImuData<double> &imuData, const Eigen::VectorXd Ui) {
+    Eigen::Matrix3d Rot = state.R;
+    Eigen::Vector3d accWorld = Rot*(imuData.acc - Ui.segment(0,3)) + _g;
+    // Eigen::Vector3d accWorld = Rot*imuData.acc + _g;
+    state.p += state.v*dt+0.5*accWorld*dt*dt;
+    state.v += accWorld*dt;
+    state.R = Rot*Exp((imuData.gyr - Ui.segment(3,3))*dt);
+    // STATE.R = Rot*Exp(imuData.gyr*dt);
+    return state;
+    
 }
 
 Eigen::MatrixXd mppiSmoothing::getNoise(const int &T) {
     return sigmaU * normGen.template generate<Eigen::MatrixXd>(dimU, T, urng);
 }
 
-void mppiSmoothing::move() {
-    xInit = xInit + (dt * f(xInit, u0));
+void mppiSmoothing::move(const ImuData<double> &imuData) {
+    STATE curState = STATE.getState();
+    xInit = f(curState, imuData, u0);
     U0.leftcols(T-1) = Uo.rightCols(T-1); 
 }
 
-void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen::MatrixXd &yMeas) {
-    start = std::chrono::high_resolution_clock::now();
-
+void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen::MatrixXd &yMeas, const ImuData<double> &imuData) {
     Eigen::MatrixXd Ui = U_0.replicate(N, 1);
     Eigen::VectorXd costs(N);
     Eigen::VectorXd weights(N);
 
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
-        Eigen::MatrixXd Xi(dimX, T+1);
+        // Eigen::MatrixXd Xi(dimX, T+1);
+        STATE Xi[T+1];
         Eigen::MatrixXd noise = getNoise(T);
         Ui.middleRows(i * dimU, dimU) += noise;
 
-        Xi.col(0) = xInit;
+        Xi[0] = xInit;
         double cost = 0.0;
 
         for (int j = 0; j < T; ++j) {
-            Xi.col(j+1) = Xi.col(j) + (dt * f(Xi.col(j), Ui.block(i * dimU, j, dimU, 1)));
-
+            STATE curState = STATE.getState();
+            // Xi.col(j+1) = f(Xi.col(j), Ui.block(i * dimU, j, dimU, 1));
+            Xi.[j+1] = f(Xi[j], ImuData, Ui.block(i * dimU, j, dimU, 1));
             Eigen::VectorXd Hx(8);
             for (int i = 0; i < 8; ++i) {
-                double dx = Xi(0,j) - anchors(0,i);
-                double dy = Xi(1,j) - anchors(1,i);
-                double dz = Xi(2,j) - anchors(2,i);
+                double dx = Xi[j].p(0) - anchors(0,i);
+                double dy = Xi[j].p(1) - anchors(1,i);
+                double dz = Xi[j].p(2) - anchors(2,i);
                 Hx(i) = std::sqrt(dx*dx + dy*dy + dz*dz);
             }
 
             double stepCost = (yMeas.col(j) - Hx).squaredNorm();
             cost += stepCost;
         }
-
         costs(i) = cost;
     }
 
@@ -152,4 +158,13 @@ Eigen::MatrixXd mppiSmoothing::vectorToSkewSymmetric(const Eigen::Vector3d &vect
 
 mppiSmoothing::~mppiSmoothing() { 
 
+}
+
+STATE STATE::getState() {
+    return STATE;
+}
+
+STATE STATE::setState(const STATE &setState) {
+    STATE state = setState;
+    return state;
 }
