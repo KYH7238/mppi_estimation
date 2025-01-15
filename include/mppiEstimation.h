@@ -19,7 +19,7 @@ public:
     Eigen::MatrixXd xInit;
     Eigen::MatrixXd xTarget;
     Eigen::MatrixXd Uo;
-    Eigen::MatrixXd Xo;
+    STATE Xo;
     Eigen::VectorXd u0;
     Eigen::MatrixXd processNoise;
     Eigen::VectorXd measurementNoise;
@@ -27,7 +27,7 @@ public:
 
 private:
     float dt;
-    int T;
+    const int T;
     int N;
     int dimX;
     int dimU;
@@ -54,7 +54,8 @@ public:
     Eigen::Vector3d p;
     Eigen::Matrix3d R;
     Eigen::Vector3d v;
-
+    STATE();
     STATE getState();
     STATE setState(const STATE &setState);
+    void init();
 }

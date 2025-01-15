@@ -9,20 +9,19 @@
 #include <omp.h>
 #include "mppiEstimation.h"
 
-mppiSmoothing::mppiSmoothing() {
+mppiSmoothing::mppiSmoothing(): T(10) {
     anchorPositions.setZero();
-    T = 10;
     N = 2000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
-    STATE.p << 0, 0, 0;
-    STATE.R.setIdentity();
-    STATE.v.setZero();
+    dim_u(6)
     dimU << 0, 0, 0, 0, 0, 0;
     sigmaUvector << 0, 0, 0, 0, 0, 0;
     sigmaU = sigmaUvector.asDiagonal();
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
+    u0 = Eigen::VectorXd::Zero(dim_u);
+    STATE Xo[T+1];
 }
 
 void mppiSmoothing::setAnchorPositions(const Eigen::Matrix<double, 3, 8> &anchorpositions) {
@@ -50,8 +49,7 @@ Eigen::MatrixXd mppiSmoothing::getNoise(const int &T) {
     return sigmaU * normGen.template generate<Eigen::MatrixXd>(dimU, T, urng);
 }
 
-void mppiSmoothing::move(const ImuData<double> &imuData) {
-    STATE curState = STATE.getState();
+void mppiSmoothing::move(const STATE curState, const ImuData<double> &imuData) {
     xInit = f(curState, imuData, u0);
     U0.leftcols(T-1) = Uo.rightCols(T-1); 
 }
@@ -64,6 +62,7 @@ void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen:
     #pragma omp parallel for
     for (int i = 0; i < N; ++i) {
         // Eigen::MatrixXd Xi(dimX, T+1);
+        // STATE[] Xi = new STATE[T]; ///////////////////////////////////////////check///////////////////////
         STATE Xi[T+1];
         Eigen::MatrixXd noise = getNoise(T);
         Ui.middleRows(i * dimU, dimU) += noise;
@@ -72,9 +71,9 @@ void mppiSmoothing::solve(const Eigen::Matrix<double,3,8> &anchors, const Eigen:
         double cost = 0.0;
 
         for (int j = 0; j < T; ++j) {
-            STATE curState = STATE.getState();
+
             // Xi.col(j+1) = f(Xi.col(j), Ui.block(i * dimU, j, dimU, 1));
-            Xi.[j+1] = f(Xi[j], ImuData, Ui.block(i * dimU, j, dimU, 1));
+            Xi[j+1] = f(Xi[j], ImuData, Ui.block(i * dimU, j, dimU, 1));
             Eigen::VectorXd Hx(8);
             for (int i = 0; i < 8; ++i) {
                 double dx = Xi[j].p(0) - anchors(0,i);
@@ -167,4 +166,13 @@ STATE STATE::getState() {
 STATE STATE::setState(const STATE &setState) {
     STATE state = setState;
     return state;
+}
+STATE::STATE(const int T) {
+    p.setZero();
+    R.setIdentity();
+    v.setZero();
+}
+
+class states
+{
 }
