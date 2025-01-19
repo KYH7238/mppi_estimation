@@ -204,24 +204,14 @@ std::pair<std::vector<ImuData>, std::vector<UwbData>> Node::interpolationAllT()
 
     for (int i = 0; i < tCount; ++i) {
      
-        if (imuDataQueue.empty() || uwbDataQueue.empty()) {
-            return {{}, {}};
-        }
 
         while (!uwbDataQueue.empty() &&
                (uwbDataQueue.front().timeStamp < imuDataQueue.front().timeStamp ||
                 uwbDataQueue.front().timeStamp > imuDataQueue.back().timeStamp)) {
             uwbDataQueue.pop();
 
-            if (uwbDataQueue.empty() || imuDataQueue.empty()) {
-                return {{}, {}};
-            }
         }
 
-            if (imuDataQueue.empty() || uwbDataQueue.empty()) {
-                return {{}, {}};
-            }
-            
         ImuData imuData1 = imuDataQueue.front();
         ImuData imuData2 = imuDataQueue.back();
         UwbData uwbData  = uwbDataQueue.front();
@@ -260,6 +250,7 @@ std::pair<std::vector<ImuData>, std::vector<UwbData>> Node::interpolationAllT()
 
 void Node::run() {
     auto [tImu, tUwb] = interpolationAllT();
+    std::cout<< tImu.size() <<std::endl;
 
     if (tImu.size() == MppiEstimation.T
         && tUwb.size() == MppiEstimation.T)
