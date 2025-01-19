@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>mppi_estimation</name>
+  <version>0.0.1</version>
+  <description>The mppi package</description>
+
+  <!-- Build tools -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Build dependencies -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>nlink_parser</build_depend>
+
+  <!-- Run-time dependencies -->
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>nlink_parser</exec_depend>
+
+  <maintainer email="you@yourdomain.tld">Your Name</maintainer>
+  <license>BSD</license>
+</package>
