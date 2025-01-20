@@ -13,6 +13,8 @@
 #include <chrono>
 #include <queue>
 #include <utility>
+#include <mutex>
+#include <thread>
 
 class STATE {
 public:
@@ -82,12 +84,13 @@ public:
     std::queue<ImuData> imuDataQueue;
     UwbData uwbData;
     ImuData imuData;
-    bool imuInit = false;    
-    bool uwbInit = false;
-    double uwbInitTime = 0;
-    double imuInitTime = 0;
-    double dt = 0;
-    double beforeT = 0;
+    bool imuInit;    
+    bool uwbInit;
+    double uwbInitTime;
+    double imuInitTime;
+    double dt;
+    double beforeT;
+    int cnt;
 
     Eigen::Matrix<double, 3, 8> anchorPositions;
     Node();

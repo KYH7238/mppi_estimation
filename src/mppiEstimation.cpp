@@ -1,5 +1,15 @@
 #include "mppiEstimation.h"
 
+Eigen::Vector<sensor_msgs::ImuConstPtr> imuBuffer;
+Eigen::Vector<nlink_parser::LinktrackTagframe0> uwbBuffer;
+
+std::mutex imuMutex, uwbMutex; 
+ImuData lastUwbImu;
+ImuData lastImu;
+int imuFreq = 10;
+
+
+
 STATE::STATE() {
     p.setZero();
     R.setIdentity();
@@ -99,11 +109,7 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
     }
 
     // visual_traj.push_back(xInit);
-
     publishPose(xInit);
-
-    // publishPose(Xo);
-
 }
 
 void mppiEstimation::publishPose(const STATE &state) {
@@ -159,6 +165,14 @@ Node::Node() {
             0.0,  0.0,  0.0,  0.0,  2.20, 2.20,  2.20,  2.20;
     MppiEstimation.setAnchorPositions(anchorPositions);
     uwbData.ranges = Eigen::VectorXd(8);
+    imuInit = false;    
+    uwbInit = false;
+    uwbInitTime = 0;
+    imuInitTime = 0;
+    dt = 0;
+    beforeT = 0;
+    cnt = 0;
+
 }
 
 void Node::uwbCallback(const nlink_parser::LinktrackTagframe0 &msg) {
@@ -171,7 +185,11 @@ void Node::uwbCallback(const nlink_parser::LinktrackTagframe0 &msg) {
         uwbData.ranges[i] = msg.dis_arr[i];
     }
     uwbDataQueue.push(uwbData);
-    run();
+    ++cnt; 
+    if (cnt >= 100) {
+        run();
+
+    }
 }
 
 void Node::imuCallback(const sensor_msgs::ImuConstPtr &msg) {   
@@ -188,28 +206,32 @@ void Node::imuCallback(const sensor_msgs::ImuConstPtr &msg) {
     imuData.acc(2) = msg->linear_acceleration.z;
 
     imuDataQueue.push(imuData);
-    run();
+    ++cnt; 
+    if (cnt >= 100) {
+        run();
+
+    }
+    // run();
+    
 }
 
 std::pair<std::vector<ImuData>, std::vector<UwbData>> Node::interpolationAllT()
 {
     int tCount = MppiEstimation.T;
 
-    if (imuDataQueue.empty() || uwbDataQueue.empty()) {
-        return {{}, {}};
-    }
+    // if (imuDataQueue.empty() || uwbDataQueue.empty()) {
+    //     return {{}, {}};
+    // }
 
     std::vector<ImuData> imuVec(tCount);
     std::vector<UwbData> uwbVec(tCount);
 
     for (int i = 0; i < tCount; ++i) {
      
-
         while (!uwbDataQueue.empty() &&
                (uwbDataQueue.front().timeStamp < imuDataQueue.front().timeStamp ||
                 uwbDataQueue.front().timeStamp > imuDataQueue.back().timeStamp)) {
             uwbDataQueue.pop();
-
         }
 
         ImuData imuData1 = imuDataQueue.front();
@@ -244,7 +266,6 @@ std::pair<std::vector<ImuData>, std::vector<UwbData>> Node::interpolationAllT()
             uwbVec[i] = uwbData;
         }
     }
-
     return std::make_pair(imuVec, uwbVec);
 }
 
