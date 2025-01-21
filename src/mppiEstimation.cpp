@@ -1,15 +1,4 @@
 #include "mppiEstimation.h"
-
-Eigen::Vector<sensor_msgs::ImuConstPtr> imuBuffer;
-Eigen::Vector<nlink_parser::LinktrackTagframe0> uwbBuffer;
-
-std::mutex imuMutex, uwbMutex; 
-ImuData lastUwbImu;
-ImuData lastImu;
-int imuFreq = 10;
-
-
-
 STATE::STATE() {
     p.setZero();
     R.setIdentity();
@@ -165,108 +154,198 @@ Node::Node() {
             0.0,  0.0,  0.0,  0.0,  2.20, 2.20,  2.20,  2.20;
     MppiEstimation.setAnchorPositions(anchorPositions);
     uwbData.ranges = Eigen::VectorXd(8);
+    theread process(processThread);
+    ros::MultiThreadedSpinner spinner(2);
+    spinner.spiin();
+    process.join();
+
     imuInit = false;    
     uwbInit = false;
+    initialized = false;
     uwbInitTime = 0;
     imuInitTime = 0;
     dt = 0;
     beforeT = 0;
     cnt = 0;
+    imuFreq = 20;
 
 }
 
+ImuData Node::fromImuMsg (const sensor_msgs::Imu & msg) {
+    ImuData data;
+    data.stamp = msg.header.stamp.toSec();
+    data.gyr[0] = msg.angular_velocity.x;
+    data.gyr[1] = msg.angular_velocity.y;
+    data.gyr[2] = msg.angular_velocity.z;
+    data.acc[0] = msg.linear_acceleration.x;
+    data.acc[1] = msg.linear_acceleration.y;
+    data.acc[2] = msg.linear_acceleration.z;
+
+    return data;
+}
+
+UwbData Node::fromUwbMsg (const nlink_parser::LinktrackTagframe0 &msg) {
+    UwbData data;
+    data.timeStamp = msg.system_time/1000.00  - uwbInitTime;  
+    for (int i = 0; i < 8; i++) {
+        data.ranges[i] = msg.dis_arr[i];
+    }    
+    return data;
+}
+
+void Node::interpolateImuData(const sensor_msgs::ImuConstPtr &firstData, const sensor_msgs::ImuConstPtr &secondData, double curStamp, sensor_msgs::Imu &interData) {
+    double firstStamp = firstData->header.stamp.toSec();
+    double secondStamp = secondData->header.stamp.toSec();
+    double scale = (curStamp - firstStamp) / (secondStamp - firstStamp);
+    interData = *firstData;
+    interData.angular_velocity.x = scale * (secondStamp->angular_velocity.x - firstStamp->angular_velocity.x) + firstStamp->angular_velocity.x;
+    interData.angular_velocity.y = scale * (secondStamp->angular_velocity.y - firstStamp->angular_velocity.y) + firstStamp->angular_velocity.y;
+    interData.angular_velocity.z = scale * (secondStamp->angular_velocity.z - firstStamp->angular_velocity.z) + firstStamp->angular_velocity.z;
+    interData.linear_acceleration.x = scale * (secondStamp->linear_acceleration.x - firstStamp->linear_acceleration.x) + firstStamp->linear_acceleration.x;
+    interData.linear_acceleration.y = scale * (secondStamp->linear_acceleration.y - firstStamp->linear_acceleration.y) + firstStamp->linear_acceleration.y;
+    interData.linear_acceleration.z = scale * (secondStamp->linear_acceleration.z - firstStamp->linear_acceleration.z) + firstStamp->linear_acceleration.z;
+}
+
+void Node::processThread()
+{
+    ros::Rate loopRate(imuFreq);
+    while(ros::ok()) {
+        std::unique_lock<mutex> imuLock(imuMutex);
+        std::unique_lock<mutex> uwbLock(uwbMutex);
+
+        if (!imuBuffer.size() && !uwbBuffer.size()) {
+            ROS_INFO_THROTTLE(10, "wait for uwb or imu msg ......");
+            imuLock.unlock();
+            uwbLock.unlock();
+            loopRate.sleep();
+            continue;
+        }
+
+        if (!initialized) {
+
+            if (!imuBuffer.size() || !uwbBuffer.size()) {
+                ROS_INFO_THROTTLE(10, "wait for uwb or imu msg ......");
+                imuLock.unlock();
+                uwbLock.unlock();
+                loopRate.sleep();
+                continue;
+            }
+            Eigen::Vector<ImuData> imuDatas;
+            for (auto &imuMsg : imuBuffer) {
+                imuDatas.push_back(fromImuMsg(*imuMsg));
+            }
+            auto iter = imuBuffer.begin();
+            for (; iter != imuBuffer.end(); iter++) {
+                if ((*iter)->header.stamp.toSec(); > uwbBuffer[0]->timeStamp)
+                    break;
+            }
+            if (imuBuffer.begin() == iter || imuBuffer.end() == iter) {
+                if (imuBuffer.begin() == iter) {
+                    uwbBuffer.erase(uwbBuffer.begin());
+                }
+                imuLock.unlock();
+                uwbLock.unlock();
+                loopRate.sleep();
+                continue;
+            }
+            sensor_msgs::Imu interImu;
+            double curStamp = uwbBuffer[0] -> timeStamp;
+            interpolateImuData(*(iter - 1), *iter, curStamp, interImu);
+            lastUwbImu = fromImuMsg(interImu); //ImuData
+            lastUwbImu.timeStamp = curStamp;
+            lastImu = lastUwbImu;
+            imuBuffer.erase(imuBuffer.begin(), iter);
+            uwbBuffer.erase(uwbBuffer.begin());
+
+            imuLock.unlock();
+            uwbLock.unlock();
+            loopRate.sleep();
+
+            initialized = true;
+            continue;            
+            
+        }
+
+        syncImu.push_back(lastImu); /////////////////// For Horizon imu datas 
+        for (auto &imuMsg : imuBuffer) {
+            ImuData curImu = fromImuMsg(*imuMsg);
+            if (curImu.timeStamp > lastImu.timeStamp) {
+                MppiEstimation.setDt(curImu.timeStamp - lastImu.timeStamp);
+                lastImu = curImu;
+            }
+        }
+
+        if (uwbBuffer.size() !=0) {
+            Eigen::Vector<ImuData> imuDatas(0);   
+            auto iter = imuBuffer.begin();
+
+            for (; iter != imuBuffer.end(); iter++) {
+                if ((*iter)->header.stamp.toSec() > uwbBuffer[0]->timeStamp)
+                    break;
+            }
+            if (imuBuffer.begin() == iter) {
+                imuLock.unlock();
+                uwbLock.unlock();
+                loopRate.sleep();
+                continue;
+            }
+            assert(imuBuffer.begin() != iter);
+            imuDatas.push_back(lastUwbImu);
+            for (auto tmpIter = imuBuffer.begin(); tmpIter != iter; tmpIter++)
+                imuDatas.push_back(fromImuMsg(*(*tmpIter)));
+            ImuData interImu;
+            sensor_msgs::Imu interImu;
+            double curStamp = uwbBuffer[0] -> timeStamp;
+            interpolateImuData(*(iter - 1), *iter, curStamp, interImu);
+            ImuData curUwbImu = fromImuMsg(interImu);
+            curUwbImu.timeStamp = curStamp;
+            imuDatas.push_back(curUwbImu)
+            UwbData uwbData = fromUwbMsg(*uwbFuffer[0]);
+            syncUwb.push_back(uwbData); /////////////////// For Horizon uwb datas 
+            if (syncImu.size()==10 && syncUwb.size() == 10) {
+                MppiEstimation.solve(syncUwb,syncImu);
+                MppiEstimation.move(syncImu[9]);
+                syncUwb.erase(syncUwb.begin());
+                syncImu.erase(syncImu.begin());
+            }            
+            lastUwbImu.timeStamp = cur_stamp;
+            lastImu = lastUwbImu;
+            uwbBuffer.erase(uwbBuffer.begin());
+            imuBuffer.erase(imuBuffQer.begin(), iter);
+        }
+
+        imu_lock.unlock();
+        uwb_lock.unlock();
+        loop_rate.sleep();
+        continue;        
+    }
+}
+
 void Node::uwbCallback(const nlink_parser::LinktrackTagframe0 &msg) {
+    std::unique_lock<mutex> lock(uwbMutex);
     if(!uwbInit){
         uwbInitTime = msg.system_time/1000.00;
         uwbInit = true;
     }
-    uwbData.timeStamp = msg.system_time/1000.00  - uwbInitTime;  
+    UwbData data;
+    data.timeStamp = msg.system_time/1000.00  - uwbInitTime;  
     for (int i = 0; i < 8; i++) {
-        uwbData.ranges[i] = msg.dis_arr[i];
+        data.ranges[i] = msg.dis_arr[i];
     }
-    uwbDataQueue.push(uwbData);
-    ++cnt; 
-    if (cnt >= 100) {
-        run();
-
-    }
+    uwbBuffer.push_back(data);
 }
 
 void Node::imuCallback(const sensor_msgs::ImuConstPtr &msg) {   
+    std::unique_lock<mutex> lock(imuMutex);
     if (!imuInit){
         imuInitTime = msg->header.stamp.toSec();
         imuInit = true;
     }
-    imuData.timeStamp = msg->header.stamp.toSec()-imuInitTime;  
-    imuData.gyr(0) = msg->angular_velocity.x;
-    imuData.gyr(1) = msg->angular_velocity.y;
-    imuData.gyr(2) = msg->angular_velocity.z;
-    imuData.acc(0) = msg->linear_acceleration.x;
-    imuData.acc(1) = msg->linear_acceleration.y;
-    imuData.acc(2) = msg->linear_acceleration.z;
-
-    imuDataQueue.push(imuData);
-    ++cnt; 
-    if (cnt >= 100) {
-        run();
-
+    else {
+    sensor_msgs::ImuConstPtr data;
+    data.timeStamp = msg->header.stamp.toSec()-imuInitTime;  
+    imuBuffer.push_back(data); 
     }
-    // run();
-    
-}
-
-std::pair<std::vector<ImuData>, std::vector<UwbData>> Node::interpolationAllT()
-{
-    int tCount = MppiEstimation.T;
-
-    // if (imuDataQueue.empty() || uwbDataQueue.empty()) {
-    //     return {{}, {}};
-    // }
-
-    std::vector<ImuData> imuVec(tCount);
-    std::vector<UwbData> uwbVec(tCount);
-
-    for (int i = 0; i < tCount; ++i) {
-     
-        while (!uwbDataQueue.empty() &&
-               (uwbDataQueue.front().timeStamp < imuDataQueue.front().timeStamp ||
-                uwbDataQueue.front().timeStamp > imuDataQueue.back().timeStamp)) {
-            uwbDataQueue.pop();
-        }
-
-        ImuData imuData1 = imuDataQueue.front();
-        ImuData imuData2 = imuDataQueue.back();
-        UwbData uwbData  = uwbDataQueue.front();
-
-        if (imuData1.timeStamp <= uwbData.timeStamp &&
-            uwbData.timeStamp <= imuData2.timeStamp)
-        {
-            double t1 = imuData1.timeStamp;
-            double t2 = imuData2.timeStamp;
-            double t  = uwbData.timeStamp;
-            double delta_t = t2 - t1;
-            double alpha = 0.0;
-
-            if (delta_t == 0.0) {
-                ROS_WARN("IMU timeStamps t1 and t2 are equal. alpha=0 forced.");
-            } else {
-                alpha = (t - t1) / delta_t;
-            }
-
-            imuData1.acc = (1.0 - alpha) * imuData1.acc + alpha * imuData2.acc;
-            imuData1.gyr = (1.0 - alpha) * imuData1.gyr + alpha * imuData2.gyr;
-
-            dt = t - beforeT;
-            beforeT = t;
-
-            uwbDataQueue.pop();
-            imuDataQueue.pop();
-
-            imuVec[i] = imuData1;
-            uwbVec[i] = uwbData;
-        }
-    }
-    return std::make_pair(imuVec, uwbVec);
 }
 
 void Node::run() {
@@ -281,3 +360,4 @@ void Node::run() {
         MppiEstimation.move(tImu[MppiEstimation.T - 1]);
     }
 }
+

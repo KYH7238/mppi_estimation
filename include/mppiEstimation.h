@@ -82,15 +82,27 @@ public:
     mppiEstimation MppiEstimation;
     std::queue<UwbData> uwbDataQueue;
     std::queue<ImuData> imuDataQueue;
+    Eigen::Vector<sensor_msgs::ImuConstPtr> imuBuffer;
+    Eigen::Vector<nlink_parser::LinktrackTagframe0::ConstPtr> uwbBuffer;
+
+    Eigen::Vector<sensor_msgs::ImuConstPtr> syncImu;
+    Eigen::Vector<nlink_parser::LinktrackTagframe0::ConstPtr> syncUwb;
+
+    std::mutex imuMutex, uwbMutex; 
+    ImuData lastUwbImu;
+    ImuData lastImu;    
     UwbData uwbData;
     ImuData imuData;
+
     bool imuInit;    
     bool uwbInit;
+    bool initialized;
     double uwbInitTime;
     double imuInitTime;
-    double dt;
+    float dt;
     double beforeT;
     int cnt;
+    int imuFreq;
 
     Eigen::Matrix<double, 3, 8> anchorPositions;
     Node();
@@ -98,4 +110,8 @@ public:
     void imuCallback(const sensor_msgs::ImuConstPtr &msg);
     std::pair<std::vector<ImuData>, std::vector<UwbData>> interpolationAllT();
     void run();
+    void interpolateImuData(const sensor_msgs::ImuConstPtr &firstData, const sensor_msgs::ImuConstPtr &secondData, double curStamp, sensor_msgs::Imu & interData);
+    void processThread();
+
+
 };
