@@ -168,7 +168,7 @@ Node::Node() {
     beforeT = 0;
     cnt = 0;
     imuFreq = 20;
-
+    
 }
 
 ImuData Node::fromImuMsg (const sensor_msgs::Imu & msg) {
