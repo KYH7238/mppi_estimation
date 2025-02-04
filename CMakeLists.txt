@@ -8,15 +8,13 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   nlink_parser
   geometry_msgs
-  roscpp
   std_msgs
   rospy
   sensor_msgs
 )
 find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(OpenMP REQUIRED)
-find_package(PythonLibs REQUIRED)  
-
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED) 
 
 catkin_package(
   CATKIN_DEPENDS roscpp nlink_parser
@@ -24,18 +22,22 @@ catkin_package(
 
 include_directories(
   include
-  /home/kim/EigenRand  
-  ${EIGEN3_INCLUDE_DIRS}
-  ${PYTHON_INCLUDE_DIRS}
-  ${catkin_INCLUDE_DIRS}
+  /home/kim/EigenRand                    
+  /usr/include/matplotlib-cpp            
+  ${EIGEN3_INCLUDE_DIRS}                  
+  ${Python3_INCLUDE_DIRS}                 
+  ${Python3_NumPy_INCLUDE_DIRS}           
+  ${catkin_INCLUDE_DIRS}                   
 )
 
-add_executable(mppi_estimationT
-  src/main.cpp
-  src/mppiEstimation.cpp
+add_executable(mppi_rocket
+  src/Rocket_main.cpp
+  src/mppiRocket.cpp
 )
 
-target_link_libraries(mppi_estimationT
-  ${catkin_LIBRARIES}        
-  OpenMP::OpenMP_CXX        
+target_link_libraries(mppi_rocket
+  ${catkin_LIBRARIES}                   
+  OpenMP::OpenMP_CXX                     
+  ${Python3_LIBRARIES}                    
+  ${Python3_NumPy_LIBRARIES}             
 )
