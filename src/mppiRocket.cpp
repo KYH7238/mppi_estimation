@@ -9,23 +9,28 @@ MPPI::MPPI() {
     dim_h = 2;  
 
     l = 0.7; 
-    dt = 0.1;
+    dt = 0.035;
     mass = 10.0;
     I = 3.33;
     g_ << -9.81, 0.0;
     umax = mass * 9.81 * 1.1;
-    
-    T = 100;
+
+    F_min = 21.58;
+    F_max = 107.91;
+    T = 200;
     gamma_u = 1.0;
-    sigma_u = 64.745 * Eigen::MatrixXd::Identity(dim_u, dim_u); //F_max = 107.91, F_min = 21.58
+    // sigma_u = 1 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    sigma_u = 67.45 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
 
     x_init = Eigen::VectorXd::Zero(dim_x);
     x_init(0) = 10.0;
-    x_init(1) = 8.0;
+    x_init(1) = 15.0;
 
+    C = 0.18;
+    
     x_target = Eigen::VectorXd::Zero(dim_x);
 }
 
@@ -62,7 +67,6 @@ void MPPI::solve() {
         }
         cost += p(Xi.col(T), x_target);
         costs(i) = cost;
-
         Ui.block(i * dim_u, 0, dim_u, T) = U_traj;
     }
 
@@ -87,7 +91,6 @@ void MPPI::solve() {
     for (int j = 0; j < T; j++) {
         Xo.col(j + 1) = f(Xo.col(j), Uo.col(j));
     }
-
     saveCost(min_cost);
 }
 
@@ -105,7 +108,7 @@ Eigen::VectorXd MPPI::f(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
         double theta = x(4);
         Eigen::Matrix2d R;
         R << cos(theta), -sin(theta),
-            sin(theta),  cos(theta);
+             sin(theta),  cos(theta);
         Eigen::Vector2d acc = g_ + (R * u) / mass;
         f_dot(0) = x(2);     
         f_dot(1) = x(3);      
@@ -120,18 +123,18 @@ Eigen::VectorXd MPPI::f(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
 double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
     double control_cost = 2e-5 * u.squaredNorm();
     double state_cost = 5e-3 * (x.head(2).squaredNorm());
-    return control_cost + state_cost;
+    double alpha = std::atan2(u(1), u(0));  // conic constraint때매 -20~20
+    double alpha_cost = C * alpha* alpha;
+    return control_cost + state_cost + alpha_cost;
 };
 
 double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
-    return 2000.0 * (x - x_target).norm();
+    return  3000*(x - x_target).norm();
 };
 
 
 void MPPI::h(Eigen::MatrixXd& U_seq) {
-//------------------- conic constraint -------------------
 // thrust u는 u(0) ≥ 0 이어야 하고, tan20 내에 있어야 함
-
     double input_angmax = tan(20.0 * M_PI / 180.0);
     for (int j = 0; j < U_seq.cols(); j++) {
         double u0 = U_seq(0, j);
@@ -160,10 +163,8 @@ void MPPI::plotCost() {
 
     }
 
-    // Plot
     plt::figure_size(800, 400);
     plt::plot(iterations, iteration_costs, {{"label", "Cost"}});
-    // plt::yscale("log"); 
     plt::xlabel("Iteration");
     plt::ylabel("Cost");
     plt::legend();
