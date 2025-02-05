@@ -168,7 +168,7 @@ Node::Node() {
     beforeT = 0;
     cnt = 0;
     imuFreq = 20;
-
+    
 }
 
 ImuData Node::fromImuMsg (const sensor_msgs::Imu & msg) {
@@ -230,24 +230,31 @@ void Node::processThread()
                 loopRate.sleep();
                 continue;
             }
-            Eigen::Vector<ImuData> imuDatas;
-            for (auto &imuMsg : imuBuffer) {
-                imuDatas.push_back(fromImuMsg(*imuMsg));
+            // Eigen::Vector<ImuData> imuDatas;
+            Eigen::Vector<UwbData> UwbDatas;
+            // for (auto &imuMsg : imuBuffer) {
+            //     imuDatas.push_back(fromImuMsg(*imuMsg));
+            // }
+            for (auto &uwbMsg : uwbBuffer) {
+                UwbDatas.push_back(fromUwbMsg(*uwbMsg));
             }
-            auto iter = imuBuffer.begin();
-            for (; iter != imuBuffer.end(); iter++) {
-                if ((*iter)->header.stamp.toSec(); > uwbBuffer[0]->timeStamp)
+
+            auto iter = uwbBuffer.begin();
+            for (; iter != uwbBuffer.end(); iter++) {
+                if ((*iter)->timeStamp > imuBuffer[0]->header.stamp.toSec())
                     break;
             }
-            if (imuBuffer.begin() == iter || imuBuffer.end() == iter) {
-                if (imuBuffer.begin() == iter) {
-                    uwbBuffer.erase(uwbBuffer.begin());
+
+            if (uwbBuffer.begin() == iter || uwbBuffer.end() == iter) {
+                if (uwbBuffer.begin() == iter) {
+                    imuBuffer.erase(imuBuffer.begin());
                 }
                 imuLock.unlock();
                 uwbLock.unlock();
                 loopRate.sleep();
                 continue;
             }
+            
             sensor_msgs::Imu interImu;
             double curStamp = uwbBuffer[0] -> timeStamp;
             interpolateImuData(*(iter - 1), *iter, curStamp, interImu);
