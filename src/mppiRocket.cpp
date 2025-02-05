@@ -18,8 +18,8 @@ MPPI::MPPI() {
     F_max = 107.91;
     T = 200;
     gamma_u = 1.0;
-    sigma_u = 67.45 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
-    // sigma_u = 0.5 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    // sigma_u = 67.45 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    sigma_u = 0.25 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
@@ -73,6 +73,7 @@ void MPPI::solve() {
     for (int i = 0; i < N; i++) {
         weights(i) = exp(-gamma_u * (costs(i) - min_cost));
     }
+
     double total_weight = weights.sum();
     weights /= total_weight;
 
@@ -116,6 +117,8 @@ Eigen::VectorXd MPPI::f(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
         f_dot(4) = x(5);     
         f_dot(5) = -(l / I) * u(1);  
         x_next = x + dt * f_dot;
+        if(x_next(0) <= 0)
+        x_next(0) = 0;
         return x_next;
     };
 
@@ -132,12 +135,12 @@ double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
 // };
 
 double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
-    double angle = std::atan2(x(0), x(1));
-    if(std::fabs(angle) > M_PI/4 || x(1) < 0) {
+    double angle = std::atan2(x(1), x(0));
+    if(std::fabs(angle) > M_PI/4) {
         // std::cout<<"inf!\n";
-        return 1e7;
+        return 1e8;
     }
-    return 3000 * (x - x_target).norm();
+    return 100 * (x - x_target).norm();
 }
 // void MPPI::h(Eigen::MatrixXd& U_seq) {
 // // thrust u는 u(0) ≥ 0 이어야 하고, tan20 내에 있어야 함
