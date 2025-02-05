@@ -9,27 +9,26 @@ MPPI::MPPI() {
     dim_h = 2;  
 
     l = 0.7; 
-    dt = 0.035;
+    dt = 0.1;
     mass = 10.0;
     I = 3.33;
     g_ << -9.81, 0.0;
-    umax = mass * 9.81 * 1.1;
 
     F_min = 21.58;
     F_max = 107.91;
     T = 200;
     gamma_u = 1.0;
-    // sigma_u = 1 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
     sigma_u = 67.45 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    // sigma_u = 0.5 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
 
     x_init = Eigen::VectorXd::Zero(dim_x);
     x_init(0) = 10.0;
-    x_init(1) = 15.0;
+    x_init(1) = 10.0;
 
-    C = 0.18;
+    C = 4.5;
     
     x_target = Eigen::VectorXd::Zero(dim_x);
 }
@@ -84,7 +83,7 @@ void MPPI::solve() {
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    std::cout << "MPPI solve time: " << elapsed.count() << " seconds" << std::endl;
+    std::cout << "time: " << elapsed.count() << " sec" << std::endl;
 
     u0 = Uo.col(0);
     Xo.col(0) = x_init;
@@ -128,29 +127,61 @@ double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
     return control_cost + state_cost + alpha_cost;
 };
 
-double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
-    return  3000*(x - x_target).norm();
-};
+// double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
+//     return  3000*(x - x_target).norm();
+// };
 
+double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
+    double angle = std::atan2(x(0), x(1));
+    if(std::fabs(angle) > M_PI/4 || x(1) < 0) {
+        // std::cout<<"inf!\n";
+        return 1e7;
+    }
+    return 3000 * (x - x_target).norm();
+}
+// void MPPI::h(Eigen::MatrixXd& U_seq) {
+// // thrust u는 u(0) ≥ 0 이어야 하고, tan20 내에 있어야 함
+//     double input_angmax = tan(20.0 * M_PI / 180.0);
+//     for (int j = 0; j < U_seq.cols(); j++) {
+//         double u0 = U_seq(0, j);
+//         double u1 = U_seq(1, j);
+//         if (u0 < 0) {
+//             U_seq(0, j) = 0;
+//             u0 = 0;
+//         }
+//         double limit = input_angmax * u0;
+//         if (u1 > limit) {
+//             U_seq(1, j) = limit;
+//         } else if (u1 < -limit) {
+//             U_seq(1, j) = -limit;
+//         }
+//     }
+// };
 
 void MPPI::h(Eigen::MatrixXd& U_seq) {
-// thrust u는 u(0) ≥ 0 이어야 하고, tan20 내에 있어야 함
-    double input_angmax = tan(20.0 * M_PI / 180.0);
-    for (int j = 0; j < U_seq.cols(); j++) {
+    const double t = std::tan(20.0 * M_PI / 180.0);
+    for (int j = 0; j < U_seq.cols(); ++j) {
         double u0 = U_seq(0, j);
         double u1 = U_seq(1, j);
-        if (u0 < 0) {
-            U_seq(0, j) = 0;
-            u0 = 0;
+        
+        if(u0 < F_min) {
+            u0 = F_min;
+        } else if(u0 > F_max) {
+            u0 = F_max;
         }
-        double limit = input_angmax * u0;
-        if (u1 > limit) {
-            U_seq(1, j) = limit;
-        } else if (u1 < -limit) {
-            U_seq(1, j) = -limit;
+        // std::cout <<u0 <<std::endl;
+        double a = u0;
+        double v = u1 / t;
+        
+        if (std::fabs(v) > a) {  
+            double factor = 0.5 * (1.0 + a / std::fabs(v));
+            v = factor * v;
+            a = factor * std::fabs(v);  
         }
+        U_seq(0, j) = a;
+        U_seq(1, j) = t * v;
     }
-};
+}
 
 void MPPI::saveCost(double cost) {
     iteration_costs.push_back(cost);

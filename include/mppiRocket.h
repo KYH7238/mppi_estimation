@@ -27,13 +27,12 @@ public:
     void plotCost();
 
 protected:
-    // Eigen::Rand::NormalGen<double> norm_gen{21.58, 107.91};  
     Eigen::Rand::NormalGen<double> norm_gen{0, 1};  
     Eigen::Vector2d g_; 
     Eigen::MatrixXd sigma_u;
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
     int N, dim_x, dim_u, dim_g, dim_h, T;       
-    double umax, gamma_u, l, dt, mass, I, F_min, F_max, C;       
+    double gamma_u, l, dt, mass, I, F_min, F_max, C;       
     
 
 };
