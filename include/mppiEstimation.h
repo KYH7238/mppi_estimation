@@ -71,7 +71,6 @@ public:
     ros::Subscriber imuSub;
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
     Eigen::Rand::NormalGen<double> normGen{0.0, 1.0};    
-
 };
 
 class Node {
@@ -112,6 +111,6 @@ public:
     void run();
     void interpolateImuData(const sensor_msgs::ImuConstPtr &firstData, const sensor_msgs::ImuConstPtr &secondData, double curStamp, sensor_msgs::Imu & interData);
     void processThread();
-
-
 };
+
+
