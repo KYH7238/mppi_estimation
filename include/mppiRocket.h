@@ -22,7 +22,7 @@ public:
     Eigen::VectorXd f(const Eigen::VectorXd& x, const Eigen::VectorXd& u);
     double q(const Eigen::VectorXd& x, const Eigen::VectorXd& u);
     double p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target);
-    void h(Eigen::MatrixXd& U_seq);
+    void h(Eigen::Ref<Eigen::MatrixXd> U_seq);
     void saveCost(double cost);
     void plotCost();
 
