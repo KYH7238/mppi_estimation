@@ -130,10 +130,6 @@ double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
     return control_cost + state_cost + alpha_cost;
 };
 
-// double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
-//     return  3000*(x - x_target).norm();
-// };
-
 double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
     double angle = std::atan2(x(1), x(0));
     if(std::fabs(angle) > M_PI/4) {

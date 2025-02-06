@@ -33,6 +33,5 @@ protected:
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
     int N, dim_x, dim_u, dim_g, dim_h, T;       
     double gamma_u, l, dt, mass, I, F_min, F_max, C;       
-    
 
 };
