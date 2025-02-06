@@ -73,7 +73,7 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
                 double dz = Xi[j].p(2) - anchorPositions(2,k);
                 Hx(k) = std::sqrt(dx*dx + dy*dy + dz*dz);
             }
-
+            
             double stepCost = (uwbData[j].ranges - Hx).squaredNorm();
             cost += stepCost;
         }

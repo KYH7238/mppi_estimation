@@ -2,7 +2,7 @@
 namespace plt = matplotlibcpp;
 MPPI::MPPI() {
 
-    N = 1000;
+    N = 2000;
     dim_x = 6;
     dim_u = 2;
     dim_g = 1;    
@@ -19,14 +19,14 @@ MPPI::MPPI() {
     T = 200;
     gamma_u = 1.0;
     // sigma_u = 67.45 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
-    sigma_u = 0.25 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    sigma_u = 0.025 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
 
     x_init = Eigen::VectorXd::Zero(dim_x);
     x_init(0) = 10.0;
-    x_init(1) = 10.0;
+    x_init(1) = 8.0;
 
     C = 4.5;
     
@@ -41,7 +41,6 @@ Eigen::MatrixXd MPPI::getNoise(const int &T) {
 
 void MPPI::solve() {
     auto start = std::chrono::high_resolution_clock::now();
-
     Eigen::MatrixXd Ui = Eigen::MatrixXd::Zero(N * dim_u, T);
     for (int i = 0; i < N; i++) {
         Ui.block(i * dim_u, 0, dim_u, T) = U_0;
@@ -62,7 +61,12 @@ void MPPI::solve() {
         double cost = 0.0;
         for (int j = 0; j < T; j++) {
             cost += q(Xi.col(j), U_traj.col(j));
-            Xi.col(j + 1) = f(Xi.col(j), U_traj.col(j));
+            Xi.col(j+1) = f(Xi.col(j), U_traj.col(j));
+            double angle = std::atan2(Xi(1, j+1), Xi(0, j+1));
+            if (std::fabs(angle) > M_PI/4) {
+                cost = 1e8;
+                break;
+            }
         }
         cost += p(Xi.col(T), x_target);
         costs(i) = cost;
@@ -73,7 +77,6 @@ void MPPI::solve() {
     for (int i = 0; i < N; i++) {
         weights(i) = exp(-gamma_u * (costs(i) - min_cost));
     }
-
     double total_weight = weights.sum();
     weights /= total_weight;
 
@@ -89,10 +92,64 @@ void MPPI::solve() {
     u0 = Uo.col(0);
     Xo.col(0) = x_init;
     for (int j = 0; j < T; j++) {
-        Xo.col(j + 1) = f(Xo.col(j), Uo.col(j));
+        Xo.col(j+1) = f(Xo.col(j), Uo.col(j));
     }
     saveCost(min_cost);
 }
+// void MPPI::solve() {
+//     auto start = std::chrono::high_resolution_clock::now();
+
+//     Eigen::MatrixXd Ui = Eigen::MatrixXd::Zero(N * dim_u, T);
+//     for (int i = 0; i < N; i++) {
+//         Ui.block(i * dim_u, 0, dim_u, T) = U_0;
+//     }
+
+//     Eigen::VectorXd costs = Eigen::VectorXd::Zero(N);
+//     Eigen::VectorXd weights = Eigen::VectorXd::Zero(N);
+
+//     #pragma omp parallel for
+//     for (int i = 0; i < N; i++) {
+//         Eigen::MatrixXd noise = getNoise(T);
+//         Eigen::MatrixXd U_traj = Ui.block(i * dim_u, 0, dim_u, T);
+//         U_traj += noise;
+//         h(U_traj);
+
+//         Eigen::MatrixXd Xi = Eigen::MatrixXd::Zero(dim_x, T+1);
+//         Xi.col(0) = x_init;
+//         double cost = 0.0;
+//         for (int j = 0; j < T; j++) {
+//             cost += q(Xi.col(j), U_traj.col(j));
+//             Xi.col(j + 1) = f(Xi.col(j), U_traj.col(j));
+//         }
+//         cost += p(Xi.col(T), x_target);
+//         costs(i) = cost;
+//         Ui.block(i * dim_u, 0, dim_u, T) = U_traj;
+//     }
+
+//     double min_cost = costs.minCoeff();
+//     for (int i = 0; i < N; i++) {
+//         weights(i) = exp(-gamma_u * (costs(i) - min_cost));
+//     }
+
+//     double total_weight = weights.sum();
+//     weights /= total_weight;
+
+//     Uo = Eigen::MatrixXd::Zero(dim_u, T);
+//     for (int i = 0; i < N; i++) {
+//         Uo += Ui.block(i * dim_u, 0, dim_u, T) * weights(i);
+//     }
+
+//     auto finish = std::chrono::high_resolution_clock::now();
+//     std::chrono::duration<double> elapsed = finish - start;
+//     std::cout << "time: " << elapsed.count() << " sec" << std::endl;
+
+//     u0 = Uo.col(0);
+//     Xo.col(0) = x_init;
+//     for (int j = 0; j < T; j++) {
+//         Xo.col(j + 1) = f(Xo.col(j), Uo.col(j));
+//     }
+//     saveCost(min_cost);
+// }
 
 void MPPI::move() {
     x_init = f(x_init, u0);
@@ -117,8 +174,8 @@ Eigen::VectorXd MPPI::f(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
         f_dot(4) = x(5);     
         f_dot(5) = -(l / I) * u(1);  
         x_next = x + dt * f_dot;
-        if(x_next(0) <= 0)
-        x_next(0) = 0;
+        // if(x_next(0) <= 0)
+        // x_next(0) = 0;
         return x_next;
     };
 
@@ -131,12 +188,12 @@ double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
 };
 
 double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
-    double angle = std::atan2(x(1), x(0));
-    if(std::fabs(angle) > M_PI/4) {
-        // std::cout<<"inf!\n";
-        return 1e8;
-    }
-    return 100 * (x - x_target).norm();
+    // double angle = std::atan2(x(1), x(0));
+    // if(std::fabs(angle) > M_PI/4) {
+    //     // std::cout<<"inf!\n";
+    //     return 1e8;
+    // }
+    return 1e-1 * (x - x_target).norm();
 }
 // void MPPI::h(Eigen::MatrixXd& U_seq) {
 // // thrust u는 u(0) ≥ 0 이어야 하고, tan20 내에 있어야 함
