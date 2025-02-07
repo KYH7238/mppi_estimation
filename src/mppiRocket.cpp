@@ -7,7 +7,7 @@ MPPI::MPPI() {
     dim_g = 1;    
     dim_h = 2;  
     l = 0.7; 
-    dt = 0.1;
+    dt = 0.01;
     mass = 10.0;
     I = 3.33;
     g_ << -9.81, 0.0;
@@ -15,12 +15,12 @@ MPPI::MPPI() {
     F_max = 107.91;
     T = 100;
     gamma_u = 1.0;
-    sigma_u = 0.1 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    sigma_u = 10 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
     x_init = Eigen::VectorXd::Zero(dim_x);
     x_init(0) = 10.0;
-    x_init(1) = 10.0;
+    x_init(1) = 5.0;
     C = 4.5;
     x_target = Eigen::VectorXd::Zero(dim_x);
 }
@@ -53,15 +53,29 @@ void MPPI::solve() {
         }
 
         cost += p(Xi.col(T), x_target);
-        // for (int j = 0; j <T; ++j) {
-        double angle = std::atan2(Xi(1, T), Xi(0, T));
-        // std::cout << angle <<std::endl;
-        std::cout << Xi(0,0)<<"," << Xi(1,0) << std::endl;
-        if (std::fabs(angle) > M_PI/4) {
-            cost = 1e8;
-            // break;
+        for (int j = 0; j < T; ++j) {
+            double xPos = Xi(0, j);
+            double yPos = Xi(1, j);
+            if (xPos <= 0.0) {
+                cost = 1e8;
+                break;
+            }
+
+            double angle = std::atan2(yPos, xPos); 
+            if (angle < 0 || angle > M_PI/4) {
+                cost = 1e8;
+                break;
+            }
         }
-        // }
+
+        // for (int j = 0; j <T; ++j) {
+        // // double angle = std::atan2(Xi(1, 0.9*T), Xi(0, 0.9*T));
+        // double angle = std::atan2(Xi(1, j), Xi(0, j));
+        //     if (std::fabs(angle) > M_PI/4) {
+        //         cost = 1e8;
+        //         break;
+        //     }
+        //     }
         costs(i) = cost;
     }
 
@@ -115,9 +129,11 @@ Eigen::VectorXd MPPI::f(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
 double MPPI::q(const Eigen::VectorXd& x, const Eigen::VectorXd& u) {
     double control_cost = 2e-5 * u.squaredNorm();
     double state_cost = 5e-3 * (x(1)*x(1));
-    double alpha = std::atan2(u(1), u(0))*180/M_PI;  // conic constraint때매 -20~20
+    // double state_cost = 5e-3 * (x.head(2).squaredNorm());
+    double alpha = std::atan2(u(1), u(0))*180/M_PI;  
     double alpha_cost = C * alpha* alpha;
     return control_cost + state_cost + alpha_cost;
+    // return state_cost ;
 };
 
 double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
@@ -125,10 +141,8 @@ double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
     Eigen::Vector2d v_diff = x.segment(2, 2) - x_target.segment(2, 2); 
     double theta_diff = x(4) - x_target(4); 
     double w_diff = x(5) - x_target(5);
-
     return 3000 * (p_diff.squaredNorm() + v_diff.squaredNorm() + theta_diff * theta_diff + w_diff * w_diff);
 }
-
 
 void MPPI::h(Eigen::Ref<Eigen::MatrixXd> U_seq) {
     const double t = std::tan(20.0 * M_PI / 180.0);
@@ -154,6 +168,7 @@ void MPPI::h(Eigen::Ref<Eigen::MatrixXd> U_seq) {
     }
 }
 
+
 void MPPI::saveCost(double cost) {
     iteration_costs.push_back(cost);
 };
@@ -162,7 +177,6 @@ void MPPI::plotCost() {
     std::vector<double> iterations(iteration_costs.size());
     for (size_t i = 0; i < iteration_costs.size(); ++i) {
         iterations[i] = static_cast<double>(i + 1); 
-
     }
 
     plt::figure_size(800, 400);
@@ -172,4 +186,3 @@ void MPPI::plotCost() {
     plt::legend();
     plt::show();
 }
-
