@@ -23,7 +23,6 @@ MPPI::MPPI() {
     x_init(1) = 6.0;
     C = 0.18;
     x_target = Eigen::VectorXd::Zero(dim_x);
-    isNearTarget = false;
 }
 
 MPPI::~MPPI() { }
@@ -90,10 +89,6 @@ void MPPI::solve() {
     Xo.col(0) = x_init;
     for (int j = 0; j < T; j++) {
         Xo.col(j+1) = f(Xo.col(j), Uo.col(j));
-        std::cout << Xo.col(0).head(2).transpose() <<std::endl;
-        if (Xo.col(0).head(2).norm() < 1 && isNearTarget == false) {
-            isNearTarget = true; 
-        }
     }
     saveCost(min_cost);
 }
@@ -138,7 +133,7 @@ double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
     Eigen::Vector2d v_diff = x.segment(2, 2) - x_target.segment(2, 2); 
     double theta_diff = x(4) - x_target(4); 
     double w_diff = x(5) - x_target(5);
-    return 3000 * (p_diff.norm() + v_diff.norm() + theta_diff * theta_diff + w_diff * w_diff);
+    return 1e-2 * (p_diff.norm() + v_diff.norm() + theta_diff * theta_diff + w_diff * w_diff);
 }
 
 void MPPI::h(Eigen::Ref<Eigen::MatrixXd> U_seq) {

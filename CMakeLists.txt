@@ -6,10 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  rospy
   nlink_parser
   geometry_msgs
   std_msgs
-  rospy
   sensor_msgs
 )
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -17,7 +17,7 @@ find_package(OpenMP REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED) 
 
 catkin_package(
-  CATKIN_DEPENDS roscpp nlink_parser
+  CATKIN_DEPENDS roscpp nlink_parser rospy
 )
 
 include_directories(
