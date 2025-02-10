@@ -13,16 +13,17 @@ MPPI::MPPI() {
     g_ << -9.81, 0.0;
     F_min = 21.58;
     F_max = 107.91;
-    T = 100;
+    T = 50;
     gamma_u = 1.0;
-    sigma_u = 10 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
+    sigma_u = 2.5 * Eigen::MatrixXd::Identity(dim_u, dim_u); 
     U_0 = 9.81 * 10.0 * Eigen::MatrixXd::Ones(dim_u, T);
     Xo = Eigen::MatrixXd::Zero(dim_x, T+1);
     x_init = Eigen::VectorXd::Zero(dim_x);
-    x_init(0) = 10.0;
-    x_init(1) = 5.0;
-    C = 4.5;
+    x_init(0) = 8.0;
+    x_init(1) = 6.0;
+    C = 0.18;
     x_target = Eigen::VectorXd::Zero(dim_x);
+    isNearTarget = false;
 }
 
 MPPI::~MPPI() { }
@@ -40,7 +41,6 @@ void MPPI::solve() {
     #pragma omp parallel for
     for (int i = 0; i < N; i++) {
         Eigen::MatrixXd noise = getNoise(T);
-        // std::cout << noise << std::endl;
         Ui.middleRows(i * dim_u, dim_u) += noise;
         h(Ui.middleRows(i * dim_u, dim_u));
         Eigen::MatrixXd Xi = Eigen::MatrixXd::Zero(dim_x, T+1);
@@ -61,6 +61,7 @@ void MPPI::solve() {
                 break;
             }
 
+            // double angle = std::atan2(Xo(1), Xo(0)); 
             double angle = std::atan2(yPos, xPos); 
             if (angle < 0 || angle > M_PI/4) {
                 cost = 1e8;
@@ -68,14 +69,6 @@ void MPPI::solve() {
             }
         }
 
-        // for (int j = 0; j <T; ++j) {
-        // // double angle = std::atan2(Xi(1, 0.9*T), Xi(0, 0.9*T));
-        // double angle = std::atan2(Xi(1, j), Xi(0, j));
-        //     if (std::fabs(angle) > M_PI/4) {
-        //         cost = 1e8;
-        //         break;
-        //     }
-        //     }
         costs(i) = cost;
     }
 
@@ -97,6 +90,10 @@ void MPPI::solve() {
     Xo.col(0) = x_init;
     for (int j = 0; j < T; j++) {
         Xo.col(j+1) = f(Xo.col(j), Uo.col(j));
+        std::cout << Xo.col(0).head(2).transpose() <<std::endl;
+        if (Xo.col(0).head(2).norm() < 1 && isNearTarget == false) {
+            isNearTarget = true; 
+        }
     }
     saveCost(min_cost);
 }
@@ -141,7 +138,7 @@ double MPPI::p(const Eigen::VectorXd& x, const Eigen::VectorXd& x_target) {
     Eigen::Vector2d v_diff = x.segment(2, 2) - x_target.segment(2, 2); 
     double theta_diff = x(4) - x_target(4); 
     double w_diff = x(5) - x_target(5);
-    return 3000 * (p_diff.squaredNorm() + v_diff.squaredNorm() + theta_diff * theta_diff + w_diff * w_diff);
+    return 3000 * (p_diff.norm() + v_diff.norm() + theta_diff * theta_diff + w_diff * w_diff);
 }
 
 void MPPI::h(Eigen::Ref<Eigen::MatrixXd> U_seq) {
