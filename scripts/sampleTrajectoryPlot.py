@@ -19,10 +19,10 @@ def animate(frame):
     if trajectory_data:
         xs, ys = zip(*trajectory_data)
         plt.plot(xs, ys, 'b-', marker='o')
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.xlim(0,20)
-        plt.ylim(0,20)
+        plt.xlabel("Y")
+        plt.ylabel("X")
+        # plt.xlim(-15,15)
+        # plt.ylim(-15,15)
         plt.title("Trajectory")
     else:
         plt.text(0.5, 0.5, "No Data", horizontalalignment='center')

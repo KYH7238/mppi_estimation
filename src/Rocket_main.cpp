@@ -1,24 +1,29 @@
 #include "mppiRocket.h"
+#include <ros/ros.h>
 
-int main() {
-    int max_iter = 200;
-    MPPI mppi;
+int main(int argc, char **argv)
+{
+    ros::init(argc, argv, "mppi_estimation_node");
+    ros::NodeHandle nh;
+
+    int max_iter = 560;
+    MPPI mppi(nh);
     double final_cost = 0;
 
-    for (int i = 0; i < max_iter; i++) {
-        if (i >=120) {
-            mppi.dt = 0.001;
-        }
-        mppi.solve();
-        // mppi.move();
+    for (int i = 0; i < max_iter && ros::ok(); i++)
+    {
+        // if (i >= 120) {
+        //     mppi.dt = 0.001;
+        // }
+        mppi.solve();  
+        // mppi.move();   
+        // mppi.publishTrajectory(mppi.Xo);
+
         final_cost = (mppi.x_init - mppi.x_target).head(2).norm();
-        // std::cout << "err: " << final_cost << std::endl;
-        std::cout << "iter: "<< i <<"\tstate: "<<mppi.x_init.head(2).transpose() <<std::endl;
-        // std::cout << mppi.x_init(1) <<std::endl;
-        // std::cout << mppi.x_init <<std::endl;
-        if (mppi.x_init(0) < 1.0) break;
+        std::cout <<"iter: " << i << "\tstate: " <<mppi.x_init.head(2).transpose() << std::endl;
+        // ROS_INFO_STREAM("Iteration " << i << " - Current state: " << mppi.x_init.transpose());
+        ros::spinOnce();
     }
-    
-    mppi.plotCost();
+    // mppi.plotCost();
     return 0;
 }

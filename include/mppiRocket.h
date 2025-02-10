@@ -28,15 +28,9 @@ public:
     void h(Eigen::Ref<Eigen::MatrixXd> U_seq);
     void saveCost(double cost);
     void plotCost();
-<<<<<<< HEAD
-    double dt;
-    bool isNearTarget;
-    int T;
-=======
     void publishTrajectory(const Eigen::MatrixXd &trajectory);
     int T;
     double dt;
->>>>>>> ae71afb94907092836833a20eb0d130c8a6167e3
 protected:
     Eigen::Rand::NormalGen<double> norm_gen{0, 1};  
     Eigen::Vector2d g_; 
@@ -44,9 +38,5 @@ protected:
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
     int N, dim_x, dim_u, dim_g, dim_h;       
     double gamma_u, l, mass, I, F_min, F_max, C;       
-<<<<<<< HEAD
-
-=======
     ros::Publisher traj_pub;
->>>>>>> ae71afb94907092836833a20eb0d130c8a6167e3
 };
