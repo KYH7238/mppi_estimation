@@ -1,4 +1,7 @@
+#include <ros/ros.h>
 #include <iostream>
+#include <nav_msgs/Path.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Dense>
 #include <EigenRand/EigenRand>
 #include <chrono>
@@ -11,7 +14,7 @@
 
 class MPPI {
 public:    
-    MPPI();
+    MPPI(ros::NodeHandle& nh);
     ~MPPI(); 
     Eigen::MatrixXd U_0, Uo, Xo;   
     Eigen::VectorXd u0, x_init, x_target;
@@ -25,13 +28,15 @@ public:
     void h(Eigen::Ref<Eigen::MatrixXd> U_seq);
     void saveCost(double cost);
     void plotCost();
-
+    void publishTrajectory(const Eigen::MatrixXd &trajectory);
+    int T;
+    double dt;
 protected:
     Eigen::Rand::NormalGen<double> norm_gen{0, 1};  
     Eigen::Vector2d g_; 
     Eigen::MatrixXd sigma_u;
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
-    int N, dim_x, dim_u, dim_g, dim_h, T;       
-    double gamma_u, l, dt, mass, I, F_min, F_max, C;       
-
+    int N, dim_x, dim_u, dim_g, dim_h;       
+    double gamma_u, l, mass, I, F_min, F_max, C;       
+    ros::Publisher traj_pub;
 };

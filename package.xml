@@ -10,7 +10,8 @@
   <!-- Build dependencies -->
   <build_depend>roscpp</build_depend>
   <build_depend>nlink_parser</build_depend>
-
+  <build_depend>rospy</build_depend>
+  <exec_depend>rospy</exec_depend>
   <!-- Run-time dependencies -->
   <exec_depend>roscpp</exec_depend>
   <exec_depend>nlink_parser</exec_depend>
