@@ -14,7 +14,8 @@
 
 class MPPI {
 public:    
-    MPPI(ros::NodeHandle& nh);
+    // MPPI(ros::NodeHandle& nh);
+    MPPI();
     ~MPPI(); 
     Eigen::MatrixXd U_0, Uo, Xo;   
     Eigen::VectorXd u0, x_init, x_target;
