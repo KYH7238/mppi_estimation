@@ -71,13 +71,13 @@ def visualize_trajectory(xc, uc, N, T_max, cmap='viridis'):
     ax.set_xlim(-15, 15)
     ax.set_ylim(-1, 12)
     
-    # anim.save("test810.gif", writer="pillow", fps=20)
+    anim.save("realBest.gif", writer="pillow", fps=20)
     
     plt.show()
     
 import pandas as pd
 
-file_path = '/home/kim/drone_ws/src/mppi_estimation/data/output3.xls'
+file_path = '/home/kim/drone_ws/src/mppi_estimation/data/realBest.xls'
 df = pd.read_csv(file_path, delimiter='\t')
 
 Y = df['Y'].values
@@ -95,3 +95,5 @@ xc = np.vstack([X, Y, VX, VY, W, A])
 uc = np.vstack([UX, UY])
 T_max = 1.1*10*9.81
 visualize_trajectory(xc, uc, N, T_max)
+
+

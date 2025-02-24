@@ -19,7 +19,8 @@ public:
     ~MPPI(); 
     Eigen::MatrixXd U_0, Uo, Xo;   
     Eigen::VectorXd u0, x_init, x_target;
-    std::vector<double> iteration_costs;        
+    std::vector<double> iteration_costs;
+    // std::vector<Eigen::MatrixXd> sampleTrajectories;        
     Eigen::MatrixXd getNoise(const int &T);
     void solve();
     void move();
@@ -29,7 +30,7 @@ public:
     void h(Eigen::Ref<Eigen::MatrixXd> U_seq);
     void saveCost(double cost);
     void plotCost();
-    void publishTrajectory(const Eigen::MatrixXd &trajectory);
+    // void publishTrajectory(const Eigen::MatrixXd &trajectory);
     int T;
     double dt;
 protected:

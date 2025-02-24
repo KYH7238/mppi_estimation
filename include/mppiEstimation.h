@@ -15,6 +15,7 @@
 #include <utility>
 #include <mutex>
 #include <thread>
+#include <condition_variable>
 
 class STATE {
 public:
@@ -81,13 +82,15 @@ public:
     mppiEstimation MppiEstimation;
     std::queue<UwbData> uwbDataQueue;
     std::queue<ImuData> imuDataQueue;
-    Eigen::Vector<sensor_msgs::ImuConstPtr> imuBuffer;
-    Eigen::Vector<nlink_parser::LinktrackTagframe0::ConstPtr> uwbBuffer;
 
-    Eigen::Vector<sensor_msgs::ImuConstPtr> syncImu;
-    Eigen::Vector<nlink_parser::LinktrackTagframe0::ConstPtr> syncUwb;
+    std::vector<sensor_msgs::ImuConstPtr> imuBuffer;
+    std::vector<nlink_parser::LinktrackTagframe0::ConstPtr> uwbBuffer;
+
+    std::vector<sensor_msgs::ImuConstPtr> syncImu;
+    std::vector<nlink_parser::LinktrackTagframe0::ConstPtr> syncUwb;
 
     std::mutex imuMutex, uwbMutex; 
+    std::condition_variable dataCond;
     ImuData lastUwbImu;
     ImuData lastImu;    
     UwbData uwbData;
@@ -97,18 +100,20 @@ public:
     bool uwbInit;
     bool initialized;
     double uwbInitTime;
-    double imuInitTime;
+    double imuInitTime, lastStamp;
     float dt;
     double beforeT;
     int cnt;
-    int imuFreq;
+    int uwbFreq;
 
     Eigen::Matrix<double, 3, 8> anchorPositions;
     Node();
     void uwbCallback(const nlink_parser::LinktrackTagframe0 &msg);
     void imuCallback(const sensor_msgs::ImuConstPtr &msg);
-    std::pair<std::vector<ImuData>, std::vector<UwbData>> interpolationAllT();
-    void run();
+
+    ImuData fromImuMsg (const sensor_msgs::Imu & msg);
+    UwbData fromUwbMsg (const nlink_parser::LinktrackTagframe0 &msg); 
+    std::pair<std::vector<ImuData>, std::vector<UwbData>> interpolationAllT_blocking();
     void interpolateImuData(const sensor_msgs::ImuConstPtr &firstData, const sensor_msgs::ImuConstPtr &secondData, double curStamp, sensor_msgs::Imu & interData);
     void processThread();
 };

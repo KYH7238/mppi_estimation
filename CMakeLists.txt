@@ -35,6 +35,11 @@ add_executable(mppi_rocket
   src/mppiRocket.cpp
 )
 
+add_executable(estimation
+  src/main.cpp
+  src/mppiEstimation.cpp
+)
+
 target_link_libraries(mppi_rocket
   ${catkin_LIBRARIES}                   
   OpenMP::OpenMP_CXX                     
