@@ -83,8 +83,8 @@ public:
     std::queue<UwbData> uwbDataQueue;
     std::queue<ImuData> imuDataQueue;
 
-    std::vector<sensor_msgs::ImuConstPtr> imuBuffer;
-    std::vector<nlink_parser::LinktrackTagframe0::ConstPtr> uwbBuffer;
+    std::vector<ImuData> imuBuffer;
+    std::vector<UwbData> uwbBuffer;
 
     std::vector<sensor_msgs::ImuConstPtr> syncImu;
     std::vector<nlink_parser::LinktrackTagframe0::ConstPtr> syncUwb;
@@ -111,10 +111,10 @@ public:
     void uwbCallback(const nlink_parser::LinktrackTagframe0 &msg);
     void imuCallback(const sensor_msgs::ImuConstPtr &msg);
 
-    ImuData fromImuMsg (const sensor_msgs::Imu & msg);
+    ImuData fromImuMsg (const sensor_msgs::Imu &msg);
     UwbData fromUwbMsg (const nlink_parser::LinktrackTagframe0 &msg); 
     std::pair<std::vector<ImuData>, std::vector<UwbData>> interpolationAllT_blocking();
-    void interpolateImuData(const sensor_msgs::ImuConstPtr &firstData, const sensor_msgs::ImuConstPtr &secondData, double curStamp, sensor_msgs::Imu & interData);
+    void interpolateImuData(const ImuData &firstData, const ImuData &secondData, double curStamp, ImuData &interData);
     void processThread();
 };
 

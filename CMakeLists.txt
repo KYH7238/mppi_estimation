@@ -46,3 +46,10 @@ target_link_libraries(mppi_rocket
   ${Python3_LIBRARIES}                    
   ${Python3_NumPy_LIBRARIES}             
 )
+
+target_link_libraries(estimation
+  ${catkin_LIBRARIES}
+  OpenMP::OpenMP_CXX
+  ${Python3_LIBRARIES}
+  ${Python3_NumPy_LIBRARIES}
+)

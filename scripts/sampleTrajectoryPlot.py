@@ -29,7 +29,7 @@ def animate(frame):
 
 def main():
     rospy.init_node('trajectory_plotter', anonymous=True)
-    rospy.Subscriber("trajectory", Path, path_callback)
+    rospy.Subscriber("mppi_pose", Path, path_callback)
 
     ani = FuncAnimation(plt.gcf(), animate, interval=100)
     plt.show()
