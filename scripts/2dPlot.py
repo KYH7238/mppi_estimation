@@ -37,7 +37,7 @@ def RMSE():
     def calculate_rmse(true_data, pred_data):
         return np.sqrt(np.mean((true_data - pred_data) ** 2, axis=0))
 
-    files = ['../config/hw3_gt.txt', '../config/mppi_pose1.txt']
+    files = ['../config/hw3_gt.txt', '../config/mppi_pose2.txt']
 
 
     uwb_data = read_data_gt(files[0])

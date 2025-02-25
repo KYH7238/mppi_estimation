@@ -5,15 +5,16 @@ STATE::STATE() {
     v.setZero();
 }
 
-mppiEstimation::mppiEstimation(): T(10), dimU(6) {
+mppiEstimation::mppiEstimation(): T(5), dimU(6) {
     anchorPositions.setZero();
     N = 4000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
     sigmaUvector.resize(6);
-    float lin_sigma = 20.0;
-    sigmaUvector << lin_sigma, lin_sigma, lin_sigma, 0.2, 0.2, 0.2;
+    float lin_sigma = 10.0;
+    float ang_sigma = 0.5;
+    sigmaUvector << lin_sigma, lin_sigma, lin_sigma, ang_sigma, ang_sigma, ang_sigma;
     sigmaU = sigmaUvector.asDiagonal();
     gammaU = 10.0;
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
