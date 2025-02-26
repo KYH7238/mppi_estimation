@@ -26,7 +26,7 @@ def interpolate_data(data, target_length):
 def rmse(a, b):
     return np.sqrt(np.mean((a - b)**2, axis=0))
 
-mppi_lines = open('../config/mppi_pose2.txt','r').readlines()
+mppi_lines = open('../config/mppi_pose1.txt','r').readlines()
 gt_lines = open('../config/hw3_gt_rotation.txt','r').readlines()
 
 mppi_euler = []
@@ -34,7 +34,7 @@ gt_euler = []
 
 for line in mppi_lines:
     vals = list(map(float, line.strip().split()))
-    x, y, z, qx, qy, qz, qw = vals
+    _, _, _, qx, qy, qz, qw = vals
     e_deg = quat_to_euler_deg(qx, qy, qz, qw)
     mppi_euler.append(e_deg)
 

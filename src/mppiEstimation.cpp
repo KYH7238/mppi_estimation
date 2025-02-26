@@ -5,16 +5,16 @@ STATE::STATE() {
     v.setZero();
 }
 
-mppiEstimation::mppiEstimation(): T(5), dimU(6) {
+mppiEstimation::mppiEstimation(): T(3), dimU(6) {
     anchorPositions.setZero();
-    N = 4000;
+    N = 8000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
     sigmaUvector.resize(6);
-    float lin_sigma = 10.0;
-    float ang_sigma = 0.5;
-    sigmaUvector << lin_sigma, lin_sigma, lin_sigma, ang_sigma, ang_sigma, ang_sigma;
+    float linSigma = 15.0; // 10
+    float angSigma = 5.0; // 1 
+    sigmaUvector << linSigma, linSigma, linSigma, angSigma, angSigma, angSigma;
     sigmaU = sigmaUvector.asDiagonal();
     gammaU = 10.0;
     resultPuber = nh.advertise<geometry_msgs::PoseStamped>("mppi_pose", 1);
@@ -36,11 +36,9 @@ STATE mppiEstimation::f(const STATE &state, const ImuData &imuData, const Eigen:
     Eigen::Matrix3d Rot = state.R;
     STATE next = state;
     Eigen::Vector3d accWorld = Rot*(imuData.acc - Ui.segment(0,3)) + _g;
-    // Eigen::Vector3d accWorld = Rot*(imuData.acc ) + _g;
     next.p += state.v*dt+0.5*accWorld*dt*dt;
     next.v += accWorld*dt;
     next.R = Rot*Exp((imuData.gyr - Ui.segment(3,3))*dt);
-    // next.R = Rot*Exp((imuData.gyr )*dt);
     return next;
 }
 
@@ -54,6 +52,7 @@ void mppiEstimation::move(const ImuData &imuData) {
 }
 
 void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vector<ImuData> &imuData) {
+    start = std::chrono::high_resolution_clock::now();
     Eigen::MatrixXd Ui = U0.replicate(N, 1);
     Eigen::VectorXd costs(N);
     Eigen::VectorXd weights(N);
@@ -69,13 +68,7 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
 
         for (int j = 0; j < T; ++j) {
             Xi[j+1] = f(Xi[j], imuData[j], Ui.block(i * dimU, j, dimU, 1));
-            Eigen::VectorXd Hx(8);
-            for (int k = 0; k < 8; ++k) { /////////////////////////////////////////// for -> colwise() 연산
-                double dx = Xi[j].p(0) - anchorPositions(0,k);
-                double dy = Xi[j].p(1) - anchorPositions(1,k);
-                double dz = Xi[j].p(2) - anchorPositions(2,k);
-                Hx(k) = std::sqrt(dx*dx + dy*dy + dz*dz);
-            }
+            Eigen::VectorXd Hx = (anchorPositions.colwise() - Xi[j].p).colwise().norm();
             double stepCost = (uwbData[j].ranges - Hx).norm();
             cost += stepCost;
         }
@@ -92,14 +85,18 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
         Uo += Ui.middleRows(i * dimU, dimU) * weights(i);
     }
 
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed_1 = finish - start;
+    elapsed = elapsed_1.count();
+    std::cout << elapsed << std::endl;
     u0 = Uo.col(0);
 
     Xo[0] = xInit;
     for (int j = 0; j < T; ++j) {
         Xo[j+1] = f(Xo[j], imuData[j], Uo.col(j));
     }
-
-    publishPose(xInit);
+    // publishPose(xInit);
+    publishPose(Xo[T]);
 }
 
 void mppiEstimation::publishPose(const STATE &state) {
@@ -115,7 +112,6 @@ void mppiEstimation::publishPose(const STATE &state) {
     pose.pose.orientation.x = q.x();
     pose.pose.orientation.y = q.y();
     pose.pose.orientation.z = q.z();
-
     resultPuber.publish(pose);
 }
 
@@ -130,7 +126,6 @@ Eigen::MatrixXd mppiEstimation::Exp(const Eigen::Vector3d &omega) {
         Eigen::Vector3d axis = omega/angle;
         double c = cos(angle);
         double s = sin(angle);
-
         Rot = c*Eigen::Matrix3d::Identity() + (1 - c)*axis*axis.transpose() + s*vectorToSkewSymmetric(axis);
     }
     return Rot;    
@@ -154,7 +149,6 @@ Node::Node() {
             0.0,  0.0,  0.0,  0.0,  2.20, 2.20,  2.20,  2.20;
     MppiEstimation.setAnchorPositions(anchorPositions);
     uwbData.ranges = Eigen::VectorXd(8);
-    // std::thread process(processThread);
     std::thread process(&Node::processThread, this);
     ros::MultiThreadedSpinner spinner(2);
     spinner.spin();
@@ -320,7 +314,6 @@ void Node::uwbCallback(const nlink_parser::LinktrackTagframe0 &msg) {
     for (int i = 0; i < 8; i++) {
         data.ranges(i) = msg.dis_arr[i];
     }
-    // std::cout << "UWB Time Stamp: " << data.timeStamp <<std::endl;
     uwbBuffer.push_back(data);
 }
 
@@ -340,7 +333,6 @@ void Node::imuCallback(const sensor_msgs::ImuConstPtr &msg) {
     data.acc.x() = msg->linear_acceleration.x;
     data.acc.y() = msg->linear_acceleration.y;
     data.acc.z() = msg->linear_acceleration.z;
-    // std::cout << "IMU Time Stamp: " << data.timeStamp <<std::endl;
     imuBuffer.push_back(data); 
     }
 }

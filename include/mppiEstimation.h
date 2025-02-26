@@ -72,6 +72,11 @@ public:
     ros::Subscriber imuSub;
     std::mt19937_64 urng{static_cast<std::uint_fast64_t>(std::time(nullptr))};    
     Eigen::Rand::NormalGen<double> normGen{0.0, 1.0};    
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> start;
+    std::chrono::time_point<std::chrono::high_resolution_clock> finish;
+    std::chrono::duration<double> elapsed_1;
+    double elapsed;    
 };
 
 class Node {
