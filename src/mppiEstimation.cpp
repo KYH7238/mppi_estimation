@@ -88,7 +88,7 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
     finish = std::chrono::high_resolution_clock::now();
     elapsed_1 = finish - start;
     elapsed = elapsed_1.count();
-    std::cout << elapsed << std::endl;
+    // std::cout << elapsed << std::endl;
     u0 = Uo.col(0);
 
     Xo[0] = xInit;
@@ -108,10 +108,10 @@ void mppiEstimation::publishPose(const STATE &state) {
     pose.pose.position.y = state.p(1);
     pose.pose.position.z = state.p(2);
     Eigen::Quaterniond q(state.R);
-    pose.pose.orientation.w = q.w();
     pose.pose.orientation.x = q.x();
     pose.pose.orientation.y = q.y();
     pose.pose.orientation.z = q.z();
+    pose.pose.orientation.w = q.w();
     resultPuber.publish(pose);
 }
 
@@ -145,8 +145,8 @@ Node::Node() {
     uwbSub = nh_.subscribe("/nlink_linktrack_tagframe0", 10, &Node::uwbCallback, this);
     imuSub = nh_.subscribe("/imu/data", 10, &Node::imuCallback, this);
     anchorPositions <<  0,    0,    8.86, 8.86, 0,    0,    8.86,  8.86,    
-            0,    8.00, 8.00, 0,    0,    8.00,  8.00,  0,
-            0.0,  0.0,  0.0,  0.0,  2.20, 2.20,  2.20,  2.20;
+                        0,    8.00, 8.00, 0,    0,    8.00,  8.00,  0,
+                        0.0,  0.0,  0.0,  0.0,  2.20, 2.20,  2.20,  2.20;
     MppiEstimation.setAnchorPositions(anchorPositions);
     uwbData.ranges = Eigen::VectorXd(8);
     std::thread process(&Node::processThread, this);
@@ -164,7 +164,6 @@ Node::Node() {
     beforeT = 0;
     cnt = 0;
     uwbFreq = 50;
-
 }
 
 ImuData Node::fromImuMsg (const sensor_msgs::Imu &msg) {
@@ -336,5 +335,3 @@ void Node::imuCallback(const sensor_msgs::ImuConstPtr &msg) {
     imuBuffer.push_back(data); 
     }
 }
-
-

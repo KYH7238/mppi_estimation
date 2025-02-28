@@ -28,7 +28,7 @@ def make_txt_file_for_plot(file_name):
 if __name__ == "__main__":
     file_name_1 = "../config/mppi_pose1.txt"
 
-    bag_path = "/home/kim/drone_ws/src/mppi_estimation/bag/2025-02-26-15-45-06.bag"
+    bag_path = "/home/kim/drone_ws/src/mppi_estimation/bag/2025-02-26-15-52-59.bag"
     topics = [("/mppi_pose", file_name_1)]
     for topic_name, file_name in topics:
 

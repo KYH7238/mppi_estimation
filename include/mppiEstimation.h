@@ -39,7 +39,7 @@ public:
 };
 
 class mppiEstimation {
-public:
+public: 
     mppiEstimation();
     ~mppiEstimation();
     void setAnchorPositions(const Eigen::Matrix<double, 3, 8> &positions);
