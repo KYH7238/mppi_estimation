@@ -30,24 +30,25 @@ include_directories(
   ${catkin_INCLUDE_DIRS}                   
 )
 
-add_executable(mppi_rocket
-  src/Rocket_main.cpp
-  src/mppiRocket.cpp
-)
+# add_executable(mppi_rocket
+#   src/Rocket_main.cpp
+#   src/mppiRocket.cpp
+# )
 
-add_executable(estimation
-  src/main.cpp
-  src/mppiEstimation.cpp
-)
+# add_executable(estimation
+#   src/main.cpp
+#   src/mppiEstimation.cpp
+# )
 
-target_link_libraries(mppi_rocket
-  ${catkin_LIBRARIES}                   
-  OpenMP::OpenMP_CXX                     
-  ${Python3_LIBRARIES}                    
-  ${Python3_NumPy_LIBRARIES}             
-)
+add_executable(mppi_node src/main.cpp src/mppiEstimation.cpp)
+target_link_libraries(mppi_node ${catkin_LIBRARIES})
+add_dependencies(mppi_node ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(estimation
+add_executable(mppi_node_2tag src/main.cpp src/mppiEstimation_2tag.cpp)
+target_link_libraries(mppi_node_2tag ${catkin_LIBRARIES})
+add_dependencies(mppi_node_2tag ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(mppi_node
   ${catkin_LIBRARIES}
   OpenMP::OpenMP_CXX
   ${Python3_LIBRARIES}

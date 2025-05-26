@@ -1,5 +1,5 @@
 <launch>
-  <!-- <rosparam file="$(find mppi_estimation)/config/params.yaml" command="load" ns="tightly_coupled_ekf"/> -->
+  <rosparam file="$(find mppi_estimation)/config/params.yaml" command="load" ns="tightly_coupled_ekf"/>
   <node name="mppi_estimationT" pkg="mppi_estimation" type="mppi_node" output="screen"/>
-
+  <node pkg="mppi_estimation" type="plot_realtime.py" name="plot_realtime" output="screen" cwd="node" />
 </launch>

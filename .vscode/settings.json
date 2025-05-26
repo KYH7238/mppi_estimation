@@ -63,6 +63,10 @@
         "cfenv": "cpp",
         "typeindex": "cpp",
         "variant": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "ranges": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "stop_token": "cpp"
     }
 }

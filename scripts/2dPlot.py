@@ -15,7 +15,7 @@ def RMSE():
 
                 data.append(values) 
             return data 
-                
+
     def read_data_gt(file_path):
         with open(file_path, 'r') as file:
             data = []
@@ -28,7 +28,7 @@ def RMSE():
 
                 data.append(values)
             return data      
-        
+
     def interpolate_data(data, target_length):
         x = np.arange(len(data))
         x_new = np.linspace(0, len(data) - 1, target_length)
@@ -39,7 +39,6 @@ def RMSE():
 
     files = ['../config/hw3_gt.txt', '../config/mppi_pose1.txt']
 
-
     uwb_data = read_data_gt(files[0])
     ekf_data = read_kf(files[1])
 
@@ -48,9 +47,7 @@ def RMSE():
     uwb_data_interp = interpolate_data(uwb_data, max_length)
     ekf_data_interp = interpolate_data(ekf_data, max_length)
 
-
     rmse_ekf = calculate_rmse(uwb_data_interp, ekf_data_interp)
-
 
     print("EKF RMSE: ", rmse_ekf[:3])
 
@@ -65,7 +62,6 @@ def RMSE():
     axs[2].plot(uwb_data_interp[:, 2], color='black', label='GT', linestyle='-')
     axs[2].plot(ekf_data_interp[:, 2], color='red', label='MPPI', linestyle='-')    
 
-    
     axs[0].set_ylabel('X[m]')
     axs[1].set_ylabel('Y[m]')
     axs[2].set_ylabel('Z[m]')
