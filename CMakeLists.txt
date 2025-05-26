@@ -44,11 +44,18 @@ add_executable(mppi_node src/main.cpp src/mppiEstimation.cpp)
 target_link_libraries(mppi_node ${catkin_LIBRARIES})
 add_dependencies(mppi_node ${catkin_EXPORTED_TARGETS})
 
-add_executable(mppi_node_2tag src/main.cpp src/mppiEstimation_2tag.cpp)
+add_executable(mppi_node_2tag src/main_2tag.cpp src/mppiEstimation_2tag.cpp)
 target_link_libraries(mppi_node_2tag ${catkin_LIBRARIES})
 add_dependencies(mppi_node_2tag ${catkin_EXPORTED_TARGETS})
 
 target_link_libraries(mppi_node
+  ${catkin_LIBRARIES}
+  OpenMP::OpenMP_CXX
+  ${Python3_LIBRARIES}
+  ${Python3_NumPy_LIBRARIES}
+)
+
+target_link_libraries(mppi_node_2tag
   ${catkin_LIBRARIES}
   OpenMP::OpenMP_CXX
   ${Python3_LIBRARIES}

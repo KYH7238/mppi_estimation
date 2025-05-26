@@ -29,9 +29,9 @@ STATE::STATE() {
     v.setZero();
 }
 
-mppiEstimation::mppiEstimation(): T(10), dimU(6) {
+mppiEstimation::mppiEstimation(): T(5), dimU(6) {
     anchorPositions.setZero();
-    N = 2000;
+    N = 10000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
@@ -93,8 +93,8 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
 
         for (int j = 0; j < T; ++j) {
             Xi[j+1] = f(Xi[j], imuData[j], Ui.block(i * dimU, j, dimU, 1));
-            Eigen::Vector3d tagL = getTagPosition(Xi[j], -0.13);
-            Eigen::Vector3d tagR = getTagPosition(Xi[j], +0.13);
+            Eigen::Vector3d tagL = getTagPosition(Xi[j], 0.13);
+            Eigen::Vector3d tagR = getTagPosition(Xi[j], -0.13);
             Eigen::VectorXd HxL = (anchorPositions.colwise() - tagL).colwise().norm();
             Eigen::VectorXd HxR = (anchorPositions.colwise() - tagR).colwise().norm();
             Eigen::VectorXd Hx(16);

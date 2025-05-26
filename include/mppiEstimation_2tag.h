@@ -80,7 +80,6 @@ public:
     std::chrono::duration<double> elapsed_1;
     double elapsed;    
 
-    // Utility: get tag position from drone pose and y-offset (e.g., -0.15 for left, +0.15 for right)
     static Eigen::Vector3d getTagPosition(const STATE& state, double y_offset);
 };
 
