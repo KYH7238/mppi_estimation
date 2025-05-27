@@ -52,7 +52,6 @@ public:
     void publishPose(const STATE &state);
     Eigen::MatrixXd Exp(const Eigen::Vector3d &omega);
     Eigen::MatrixXd vectorToSkewSymmetric(const Eigen::Vector3d &vector);
-    // Eigen::Quaterniond Rot2Quat(const Eigen::MatrixXd &Rot);
     Eigen::Matrix<double, 3, 8> anchorPositions;
     Eigen::MatrixXd U0;
     STATE xInit;
@@ -66,6 +65,7 @@ public:
     int dimU;
     double gammaU;    
     double TOL;
+    double lambdaYaw;
     Eigen::MatrixXd sigmaU;
     Eigen::VectorXd sigmaUvector;
     ros::NodeHandle nh;
@@ -121,7 +121,6 @@ public:
     Node();
     void uwbCallback(const nlink_parser::LinktrackTagframe0 &msg);
     void imuCallback(const sensor_msgs::ImuConstPtr &msg);
-
     ImuData fromImuMsg (const sensor_msgs::Imu &msg);
     UwbData fromUwbMsg (const nlink_parser::LinktrackTagframe0 &msg); 
     std::pair<std::vector<ImuData>, std::vector<UwbData>> interpolationAllT_blocking();

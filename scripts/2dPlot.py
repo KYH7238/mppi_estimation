@@ -37,6 +37,7 @@ def RMSE():
     def calculate_rmse(true_data, pred_data):
         return np.sqrt(np.mean((true_data - pred_data) ** 2, axis=0))
 
+    # files = ['../config/20250527/0502_hw1_gt.txt', '../config/20250527/2tag_mppi_pose.txt']
     files = ['../config/hw3_gt.txt', '../config/mppi_pose1.txt']
 
     uwb_data = read_data_gt(files[0])
@@ -46,6 +47,9 @@ def RMSE():
 
     uwb_data_interp = interpolate_data(uwb_data, max_length)
     ekf_data_interp = interpolate_data(ekf_data, max_length)
+
+    uwb_data_interp = uwb_data_interp[:, :3]
+    ekf_data_interp = ekf_data_interp[:, :3]
 
     rmse_ekf = calculate_rmse(uwb_data_interp, ekf_data_interp)
 

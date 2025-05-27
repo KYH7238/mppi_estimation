@@ -7,7 +7,11 @@ def quat_to_euler_deg(qx, qy, qz, qw):
     return r.as_euler('xyz', degrees=True)
 
 def rotmat_to_euler_deg(mat):
-    mat = np.array(mat).reshape(3,3)
+    mat = np.array(mat)
+    if mat.size == 16:
+        mat = mat.reshape(4, 4)[:3, :3]
+    else:
+        mat = mat.reshape(3, 3)
     r = R.from_matrix(mat)
     return r.as_euler('xyz', degrees=True)
 
@@ -26,9 +30,10 @@ def interpolate_data(data, target_length):
 def rmse(a, b):
     return np.sqrt(np.mean((a - b)**2, axis=0))
 
-mppi_lines = open('../config/mppi_pose1.txt','r').readlines()
-gt_lines = open('../config/hw3_gt_rotation.txt','r').readlines()
-
+mppi_lines = open('../config/20250527/2tag_mppi_pose.txt','r').readlines()
+gt_lines = open('../config/20250527/0502_hw1_gt.txt','r').readlines()
+# mppi_lines = open('../config/mppi_pose1.txt','r').readlines()
+# gt_lines = open('../config/hw3_gt_rotation.txt','r').readlines()
 mppi_euler = []
 gt_euler = []
 

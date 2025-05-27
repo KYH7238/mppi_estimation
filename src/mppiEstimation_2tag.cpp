@@ -31,7 +31,7 @@ STATE::STATE() {
 
 mppiEstimation::mppiEstimation(): T(5), dimU(6) {
     anchorPositions.setZero();
-    N = 10000;
+    N = 12000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
@@ -297,7 +297,7 @@ void Node::processThread()
         }
 
         std::pair<std::vector<ImuData>, std::vector<UwbData>> syncPair;
-        while (true)//dataCond에서 UWB 1개, IMU 2개를 기다리거나 혹은 5ms 를 기다리거나 해서 깨어나긴 하지만 다른 스레드에서 이를 소비해 버리거나(Erase 혹은 remove하면)했을 수도 있으니까 main thread로 들어가기전에 한번 더 확인
+        while (true)//dataCond에서 UWB 1개, IMU 2개를 기다리거나 혹은 5ms 를 기다리거나 해서 깨어나긴 하지만 다른 스레드에서 이를 소비해 버리거나(erase 혹은 remove하면)했을 수도 있으니까 main thread로 들어가기전에 한번 더 확인
         {
             {
                 std::lock_guard<std::mutex> imuLock(imuMutex);

@@ -122,7 +122,7 @@ class Plotter:
 
     def read_gt_file(self):
         # gt_file_path = "../config/0612_hw3_gt.txt"  
-        gt_file_path = "../config/0502_hw1_gt.txt"  
+        gt_file_path = "../config/20250527/0502_hw1_gt.txt"  
         with open(gt_file_path, 'r') as file:
             for line in file:
                 data = line.strip().split("\t")
