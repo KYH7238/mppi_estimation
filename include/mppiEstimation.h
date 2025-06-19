@@ -16,6 +16,7 @@
 #include <mutex>
 #include <thread>
 #include <condition_variable>
+#include <fstream>
 
 class STATE {
 public:

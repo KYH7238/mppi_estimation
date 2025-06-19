@@ -7,7 +7,6 @@ def read_gt_rpy(file_path):
     with open(file_path, 'r') as f:
         for line in f:
             vals = list(map(float, line.strip().split()))
-            # 4번째~6번째 값: roll, pitch, yaw (degree)
             rpy = vals[3:6]
             data.append(rpy)
     return np.array(data)
@@ -42,7 +41,7 @@ def rmse(a, b):
     return np.sqrt(np.mean((a - b)**2, axis=0))
 
 gt_file = '../config/20250527/0502_hw1_gt.txt'
-mppi_file = '../config/20250527/2tag_mppi_pose.txt'
+mppi_file = '../config/20250527/uwb_node.txt'
 # gt_file = '../config/hw3_gt.txt'
 # mppi_file = '../config/mppi_pose1.txt'
 

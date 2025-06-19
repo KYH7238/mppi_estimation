@@ -5,15 +5,15 @@ STATE::STATE() {
     v.setZero();
 }
 
-mppiEstimation::mppiEstimation(): T(3), dimU(6) {
+mppiEstimation::mppiEstimation(): T(5), dimU(6) {
     anchorPositions.setZero();
-    N = 8000;
+    N = 15000;
     _g << 0, 0, 9.81;
     TOL = 1e-9;
     dt = 0;
     sigmaUvector.resize(6);
-    float linSigma = 15.0; // 10
-    float angSigma = 5.0; // 1 
+    float linSigma = 10.0; // 10
+    float angSigma = 1.0; // 1 
     sigmaUvector << linSigma, linSigma, linSigma, angSigma, angSigma, angSigma;
     sigmaU = sigmaUvector.asDiagonal();
     gammaU = 10.0;
@@ -95,9 +95,77 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
     for (int j = 0; j < T; ++j) {
         Xo[j+1] = f(Xo[j], imuData[j], Uo.col(j));
     }
-    // publishPose(xInit);
-    publishPose(Xo[T]);
+    publishPose(xInit);
+    // publishPose(Xo[T]);
 }
+
+
+// void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vector<ImuData> &imuData)
+// {
+//     start = std::chrono::high_resolution_clock::now();
+
+//     Eigen::MatrixXd Ui   = U0.replicate(N, 1);
+//     Eigen::VectorXd costs(N), weights(N);
+
+//     const double arrivCostPos = 1.0;
+//     const double arrivCostRot = 10.0;
+
+//     STATE Xnom[T+1];
+//     Xnom[0] = xInit;
+//     Eigen::VectorXd zeroU = Eigen::VectorXd::Zero(dimU);
+//     for (int j = 0; j < T; ++j) {
+//         Xnom[j+1] = f(Xnom[j], imuData[j], zeroU);
+//     }
+
+//     #pragma omp parallel for
+//     for (int i = 0; i < N; ++i) {
+//         STATE Xi[T+1];
+//         Xi[0] = xInit;
+//         Eigen::MatrixXd noise = getNoise(T);
+//         Ui.middleRows(i * dimU, dimU) += noise;
+
+//         double cost = 0.0;
+//         for (int j = 0; j < T; ++j) {
+//             Xi[j+1] = f(Xi[j], imuData[j], Ui.block(i * dimU, j, dimU, 1));
+
+//             Eigen::VectorXd Hx = (anchorPositions.colwise() - (Xi[j].p)).colwise().norm();
+//             cost += (uwbData[j].ranges - Hx).norm();
+//             std::cout <<"uwb cost: "<<(uwbData[j].ranges - Hx).norm()<<std::endl;
+
+//             Eigen::Vector3d dp = Xi[j+1].p - Xnom[j+1].p;
+//             cost += arrivCostPos * dp.squaredNorm();
+
+//             Eigen::Matrix3d dR = Xnom[j+1].R.transpose() * Xi[j+1].R;
+//             Eigen::AngleAxisd aa(dR);
+//             Eigen::Vector3d dTheta = aa.axis() * aa.angle();
+//             std::cout <<"imu cost: "<< arrivCostRot * dTheta.squaredNorm() <<std::endl; 
+//             cost += arrivCostRot * dTheta.squaredNorm();
+//         }
+
+//         costs(i) = cost;
+//     }
+
+//     double minCost = costs.minCoeff();
+//     weights = (-gammaU * (costs.array() - minCost)).exp();
+//     weights /= weights.sum();
+//     Uo = Eigen::MatrixXd::Zero(dimU, T);
+//     Uo.setZero();
+//     for (int i = 0; i < N; ++i) {
+//         Uo += Ui.middleRows(i * dimU, dimU) * weights(i);
+//     }
+
+//     finish    = std::chrono::high_resolution_clock::now();
+//     elapsed_1 = finish - start;
+//     elapsed   = elapsed_1.count();
+
+//     u0 = Uo.col(0);
+
+//     Xo[0] = xInit;
+//     for (int j = 0; j < T; ++j) {
+//         Xo[j+1] = f(Xo[j], imuData[j], Uo.col(j));
+//     }
+//     publishPose(xInit);
+// }
 
 void mppiEstimation::publishPose(const STATE &state) {
     geometry_msgs::PoseStamped pose;

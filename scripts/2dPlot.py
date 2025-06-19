@@ -22,13 +22,13 @@ def RMSE():
             for line in file.readlines():
                 values = list(map(float, line.strip().split('\t')))
                 values[:] = [v * 0.001 for v in values[:]]
-                values[0] += 4.5 
-                values[1] += 4.0  
+                # values[0] += 4.5 
+                # values[1] += 4.0  
                 # values[2] -= 0.4  
 
                 data.append(values)
             return data      
-
+    
     def interpolate_data(data, target_length):
         x = np.arange(len(data))
         x_new = np.linspace(0, len(data) - 1, target_length)
@@ -37,8 +37,8 @@ def RMSE():
     def calculate_rmse(true_data, pred_data):
         return np.sqrt(np.mean((true_data - pred_data) ** 2, axis=0))
 
-    # files = ['../config/20250527/0502_hw1_gt.txt', '../config/20250527/2tag_mppi_pose.txt']
-    files = ['../config/hw3_gt.txt', '../config/mppi_pose1.txt']
+    files = ['../config/20250527/0502_hw1_gt.txt', '../config/20250527/2tag_mppi_pose.txt']
+    # files = ['../config/hw3_gt.txt', '../config/mppi_pose1.txt']
 
     uwb_data = read_data_gt(files[0])
     ekf_data = read_kf(files[1])

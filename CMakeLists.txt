@@ -48,6 +48,10 @@ add_executable(mppi_node_2tag src/main_2tag.cpp src/mppiEstimation_2tag.cpp)
 target_link_libraries(mppi_node_2tag ${catkin_LIBRARIES})
 add_dependencies(mppi_node_2tag ${catkin_EXPORTED_TARGETS})
 
+add_executable(ekf_node src/main_ekf.cpp src/droneLocalization.cpp)
+target_link_libraries(ekf_node ${catkin_LIBRARIES})
+add_dependencies(ekf_node ${catkin_EXPORTED_TARGETS})
+
 target_link_libraries(mppi_node
   ${catkin_LIBRARIES}
   OpenMP::OpenMP_CXX

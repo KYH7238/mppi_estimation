@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="mppi_estimation" type="ekf_node" name="ekf_localization" output="screen" />
+    <node pkg="mppi_estimation" type="plot_realtime_2tag.py" name="plot_realtime_2tag" output="screen" cwd="node" />
+</launch> 

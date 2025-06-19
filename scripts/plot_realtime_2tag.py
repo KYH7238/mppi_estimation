@@ -57,10 +57,8 @@ class Plotter:
         self.pub_3 = rospy.Publisher('/esekf', Path, queue_size=10)
         self.pub_gt = rospy.Publisher('/gt', Path, queue_size=10)
 
-        # rospy.Subscriber("/result_uwb", PoseStamped, self.esekf_uwb_callback)
         rospy.Subscriber("/mppi_pose", PoseStamped, self.ukf_uwb_callback)
-        # rospy.Subscriber("/result_uwb", PoseStamped, self.ukf_uwb_esekf_callback)
-        rospy.Subscriber("/ukf", PoseStamped, self.ukf_uwb_esekf_callback)
+        rospy.Subscriber("/ekf_node", PoseStamped, self.ukf_uwb_esekf_callback)
         rospy.Subscriber("/estimated_path", Path, self.pf_callback)
         self.read_gt_file()
 
@@ -190,7 +188,7 @@ class Plotter:
             # ax.scatter(self.esekf_x_uwb, self.esekf_y_uwb, self.esekf_z_uwb, c='k', label='UWB position', s=1)
             ax.scatter(self.gt_x, self.gt_y, self.gt_z, c='k', label='Ground Truth', s=1)
             ax.scatter(self.ukf_x_uwb, self.ukf_y_uwb, self.ukf_z_uwb, c='r', label='MPPI', s=1)
-            # ax.scatter(self.ukf_esekf_x_uwb, self.ukf_esekf_y_uwb, self.ukf_esekf_z_uwb, c='b', label='IEKF', s=1,linestyle = '-')
+            ax.scatter(self.ukf_esekf_x_uwb, self.ukf_esekf_y_uwb, self.ukf_esekf_z_uwb, c='b', label='EKF', s=1,linestyle = '-')
             # ax.scatter(self.pf_x, self.pf_y, self.pf_z, c='g', label='PF', s=1)
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
