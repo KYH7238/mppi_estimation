@@ -75,6 +75,7 @@ void mppiEstimation::move(const ImuData &imuData) {
     U0.leftCols(T-1) = Uo.rightCols(T-1); 
 
 }
+
 void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vector<ImuData> &imuData) {
     // start = std::chrono::high_resolution_clock::now();
     Eigen::MatrixXd Ui = U0.replicate(N, 1);
@@ -92,13 +93,13 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
 
         for (int j = 0; j < T; ++j) {
             Xi[j+1] = f(Xi[j], imuData[j], Ui.block(i * dimU, j, dimU, 1));
-            // Eigen::Vector3d tagL = getTagPosition(Xi[j], 0.13);
+            Eigen::Vector3d tagL = getTagPosition(Xi[j], 0.13);
             Eigen::Vector3d tagR = getTagPosition(Xi[j], -0.13);
-            // Eigen::VectorXd HxL = (anchorPositions.colwise() - tagL).colwise().norm();
+            Eigen::VectorXd HxL = (anchorPositions.colwise() - tagL).colwise().norm();
             Eigen::VectorXd HxR = (anchorPositions.colwise() - tagR).colwise().norm();
-            Eigen::VectorXd Hx(8);
-            Hx << HxR;
-            double stepCost = (uwbData[j].ranges.tail(8) - Hx).norm();
+            Eigen::VectorXd Hx(16);
+            Hx << HxL, HxR;
+            double stepCost = (uwbData[j].ranges - Hx).norm();
             cost += stepCost;
         }
         costs(i) = cost;
@@ -126,57 +127,6 @@ void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vecto
     publishPose(xInit);
     // publishPose(Xo[T]);
 }
-// void mppiEstimation::solve(const std::vector<UwbData> &uwbData, const std::vector<ImuData> &imuData) {
-//     // start = std::chrono::high_resolution_clock::now();
-//     Eigen::MatrixXd Ui = U0.replicate(N, 1);
-//     Eigen::VectorXd costs(N);
-//     Eigen::VectorXd weights(N);
-
-//     #pragma omp parallel for
-//     for (int i = 0; i < N; ++i) {
-//         STATE Xi[T+1];
-//         Eigen::MatrixXd noise = getNoise(T);
-//         Ui.middleRows(i * dimU, dimU) += noise;
-
-//         Xi[0] = xInit;
-//         double cost = 0.0;
-
-//         for (int j = 0; j < T; ++j) {
-//             Xi[j+1] = f(Xi[j], imuData[j], Ui.block(i * dimU, j, dimU, 1));
-//             Eigen::Vector3d tagL = getTagPosition(Xi[j], 0.13);
-//             Eigen::Vector3d tagR = getTagPosition(Xi[j], -0.13);
-//             Eigen::VectorXd HxL = (anchorPositions.colwise() - tagL).colwise().norm();
-//             Eigen::VectorXd HxR = (anchorPositions.colwise() - tagR).colwise().norm();
-//             Eigen::VectorXd Hx(16);
-//             Hx << HxL, HxR;
-//             double stepCost = (uwbData[j].ranges - Hx).norm();
-//             cost += stepCost;
-//         }
-//         costs(i) = cost;
-//     }
-
-//     double minCost = costs.minCoeff();
-//     weights = (-gammaU * (costs.array() - minCost)).exp();
-//     double totalWeight = weights.sum();
-//     weights /= totalWeight;
-
-//     Uo = Eigen::MatrixXd::Zero(dimU, T);
-//     for (int i = 0; i < N; ++i) {
-//         Uo += Ui.middleRows(i * dimU, dimU) * weights(i);
-//     }
-
-//     finish = std::chrono::high_resolution_clock::now();
-//     // elapsed_1 = finish - start;
-//     // elapsed = elapsed_1.count();
-//     u0 = Uo.col(0);
-
-//     Xo[0] = xInit;
-//     for (int j = 0; j < T; ++j) {
-//         Xo[j+1] = f(Xo[j], imuData[j], Uo.col(j));
-//     }
-//     publishPose(xInit);
-//     // publishPose(Xo[T]);
-// }
 
 void mppiEstimation::publishPose(const STATE &state) {
     geometry_msgs::PoseStamped pose;

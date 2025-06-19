@@ -149,8 +149,6 @@ STATE EKF::correction() {
 
     K = covP*jacobianMatH.transpose()*residualCov.inverse();
     updateState = K*(vecZ-vecH);
-    // ROS_INFO_STREAM("update state:" << updateState.transpose());
-    // ROS_INFO_STREAM("k norm:" << K.norm());
     State.p += updateState.segment<3>(0);
     State.R = State.R*Exp(updateState.segment<3>(3));
     State.v += updateState.segment<3>(6);
@@ -278,7 +276,6 @@ void EKF::imuCallback(const sensor_msgs::ImuConstPtr &msg) {
     double t = msg->header.stamp.toSec();
 
     if (!imuInit) {
-        // 첫 IMU 데이터를 기준으로 시간과 이전 값들을 초기화
         imuInit     = true;
         imuInitTime = t;
         beforeT     = 0.0;  
